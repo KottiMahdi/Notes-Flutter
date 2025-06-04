@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "249847083388",
+    "project_id": "myapp-e91fb",
+    "storage_bucket": "myapp-e91fb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249847083388:android:ea80aa5414d12d41fdb4f9",
+        "android_client_info": {
+          "package_name": "com.blockNote.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "249847083388-imif47cqig1v1lc984m9eh0n67kp1c9e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.blockNote.app",
+            "certificate_hash": "05627741031e99f8233d92bf11a2d01e4004b9ee"
+          }
+        },
+        {
+          "client_id": "249847083388-e3eqmonv5ffrmp2u9124jq8itrsf1cnd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqkeNFghHuHxOiF90UulgU8W3UDe_i6ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249847083388-e3eqmonv5ffrmp2u9124jq8itrsf1cnd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "249847083388-lrsrkgn1hv38dpqc2agc564ngts3vt4j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.notesManagementMobilleApplication"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
