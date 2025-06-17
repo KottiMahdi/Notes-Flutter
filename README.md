@@ -1,6 +1,9 @@
 # notes_management_mobille_application
 
-
+## 📋 Features
+**Concept and development mobile application notes management**
+• Mobile application provides users to store, and manage their notes.
+Technologies: Dart, Flutter, Firebase
 ## 📸 Screenshots
   
 ![App Screenshot](assets/img/Untitled.png)
