@@ -1,5 +1,10 @@
 # notes_management_mobille_application
 
+
+## 📸 Screenshots
+  
+![App Screenshot](assets/img/Untitled.png)
+
 A new Flutter project.
 
 ## Getting Started
