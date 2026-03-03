@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class customLogo extends StatelessWidget {
-  const customLogo({super.key});
+class CustomLogo extends StatelessWidget {
+  const CustomLogo({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -22,4 +22,3 @@ class customLogo extends StatelessWidget {
     );
   }
 }
-
