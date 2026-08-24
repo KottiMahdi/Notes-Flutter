@@ -4,7 +4,12 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
 
 class AddCategoryView extends StatefulWidget {
-  const AddCategoryView({super.key});
+  final CategoryController? categoryController;
+
+  const AddCategoryView({
+    super.key,
+    this.categoryController,
+  });
 
   @override
   State<AddCategoryView> createState() => _AddCategoryViewState();
@@ -13,7 +18,8 @@ class AddCategoryView extends StatefulWidget {
 class _AddCategoryViewState extends State<AddCategoryView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameCtrl = TextEditingController();
-  final CategoryController _categoryController = CategoryController();
+  late final CategoryController _categoryController =
+      widget.categoryController ?? CategoryController();
   bool _isLoading = false;
 
   @override

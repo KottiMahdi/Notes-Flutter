@@ -8,12 +8,14 @@ class EditNoteView extends StatefulWidget {
   final String categoryId;
   final String noteId;
   final String oldText;
+  final NoteController? noteController;
 
   const EditNoteView({
     super.key,
     required this.categoryId,
     required this.noteId,
     required this.oldText,
+    this.noteController,
   });
 
   @override
@@ -23,7 +25,8 @@ class EditNoteView extends StatefulWidget {
 class _EditNoteViewState extends State<EditNoteView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _noteCtrl = TextEditingController();
-  final NoteController _noteController = NoteController();
+  late final NoteController _noteController =
+      widget.noteController ?? NoteController();
   bool _isLoading = false;
 
   @override

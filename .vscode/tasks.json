@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "flutter-pub-get-refresh",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"pub",
+				"get"
+			]
+		},
+		{
+			"label": "flutter-analyze-now",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"analyze"
+			]
+		}
+	]
+}

@@ -32,9 +32,23 @@ class MyApp extends StatelessWidget {
                   fontWeight: FontWeight.bold),
               iconTheme: const IconThemeData(color: Colors.orange))),
       debugShowCheckedModeBanner: false,
-      home: FirebaseAuth.instance.currentUser == null
-          ? const LoginView()
-          : const HomeView(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final user = snapshot.data;
+          if (user == null || !user.emailVerified) {
+            return const LoginView();
+          }
+
+          return const HomeView();
+        },
+      ),
       routes: {
         "homepage": (context) => const HomeView(),
         "addCategory": (context) => const AddCategoryView(),

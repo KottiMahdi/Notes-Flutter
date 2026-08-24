@@ -13,14 +13,14 @@ class NoteModel {
     return NoteModel(
       id: id,
       note: map['note'] ?? '',
-      userId: map['id'] ?? '',
+      userId: map['userId'] ?? map['uid'] ?? map['id'] ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'note': note,
-      'id': userId,
+      'userId': userId,
     };
   }
 }

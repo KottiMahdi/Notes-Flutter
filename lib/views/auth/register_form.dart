@@ -7,7 +7,9 @@ import '../../controllers/auth_controller.dart';
 import '../../models/user_model.dart';
 
 class RegisterForm extends StatefulWidget {
-  const RegisterForm({super.key});
+  final AuthController? authController;
+
+  const RegisterForm({super.key, this.authController});
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -21,7 +23,7 @@ class _RegisterFormState extends State<RegisterForm> {
   late TextEditingController _confirmPasswordCtrl;
   bool _isObscured = true;
 
-  final AuthController _authController = AuthController();
+  late final AuthController _authController;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _RegisterFormState extends State<RegisterForm> {
     _emailCtrl = TextEditingController();
     _passwordCtrl = TextEditingController();
     _confirmPasswordCtrl = TextEditingController();
+    _authController = widget.authController ?? AuthController();
     super.initState();
   }
 

@@ -7,15 +7,24 @@ import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  final CategoryController? categoryController;
+  final AuthController? authController;
+
+  const HomeView({
+    super.key,
+    this.categoryController,
+    this.authController,
+  });
 
   @override
   State<HomeView> createState() => _HomeViewState();
 }
 
 class _HomeViewState extends State<HomeView> {
-  final CategoryController _categoryController = CategoryController();
-  final AuthController _authController = AuthController();
+  late final CategoryController _categoryController =
+      widget.categoryController ?? CategoryController();
+  late final AuthController _authController =
+      widget.authController ?? AuthController();
 
   bool _isLoading = true;
   List<CategoryModel> _categories = [];

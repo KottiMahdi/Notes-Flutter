@@ -6,7 +6,13 @@ import 'note_list_view.dart';
 
 class AddNoteView extends StatefulWidget {
   final String categoryId;
-  const AddNoteView({super.key, required this.categoryId});
+  final NoteController? noteController;
+
+  const AddNoteView({
+    super.key,
+    required this.categoryId,
+    this.noteController,
+  });
 
   @override
   State<AddNoteView> createState() => _AddNoteViewState();
@@ -15,7 +21,8 @@ class AddNoteView extends StatefulWidget {
 class _AddNoteViewState extends State<AddNoteView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _noteCtrl = TextEditingController();
-  final NoteController _noteController = NoteController();
+  late final NoteController _noteController =
+      widget.noteController ?? NoteController();
   bool _isLoading = false;
 
   @override

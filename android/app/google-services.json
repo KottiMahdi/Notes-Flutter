@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "249847083388-imif47cqig1v1lc984m9eh0n67kp1c9e.apps.googleusercontent.com",
+          "client_id": "249847083388-e88ngm83m4859p3665u1a3k4ajsa3bm5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.blockNote.app",
-            "certificate_hash": "05627741031e99f8233d92bf11a2d01e4004b9ee"
+            "certificate_hash": "a777657f86e4b290e3ed4b1ac2190f2803e2fcf4"
           }
         },
         {

@@ -13,14 +13,14 @@ class CategoryModel {
     return CategoryModel(
       id: id,
       name: map['name'] ?? '',
-      userId: map['id'] ?? '',
+      userId: map['userId'] ?? map['uid'] ?? map['id'] ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'id': userId,
+      'userId': userId,
     };
   }
 }

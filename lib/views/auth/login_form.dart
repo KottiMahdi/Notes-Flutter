@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../../controllers/auth_controller.dart';
 
 class LoginForm extends StatefulWidget {
-  const LoginForm({super.key});
+  final AuthController? authController;
+
+  const LoginForm({super.key, this.authController});
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -16,12 +18,13 @@ class _LoginFormState extends State<LoginForm> {
   late TextEditingController _passwordCtrl;
   bool _isObscured = true;
 
-  final AuthController _authController = AuthController();
+  late final AuthController _authController;
 
   @override
   void initState() {
     _emailCtrl = TextEditingController();
     _passwordCtrl = TextEditingController();
+    _authController = widget.authController ?? AuthController();
     super.initState();
   }
 

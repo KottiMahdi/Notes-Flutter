@@ -6,9 +6,14 @@ import '../widgets/custom_button.dart';
 class UpdateCategoryView extends StatefulWidget {
   final String docId;
   final String oldName;
+  final CategoryController? categoryController;
 
-  const UpdateCategoryView(
-      {super.key, required this.docId, required this.oldName});
+  const UpdateCategoryView({
+    super.key,
+    required this.docId,
+    required this.oldName,
+    this.categoryController,
+  });
 
   @override
   State<UpdateCategoryView> createState() => _UpdateCategoryViewState();
@@ -17,7 +22,8 @@ class UpdateCategoryView extends StatefulWidget {
 class _UpdateCategoryViewState extends State<UpdateCategoryView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameCtrl = TextEditingController();
-  final CategoryController _categoryController = CategoryController();
+  late final CategoryController _categoryController =
+      widget.categoryController ?? CategoryController();
   bool _isLoading = false;
 
   @override

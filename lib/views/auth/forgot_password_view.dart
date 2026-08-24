@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../../controllers/auth_controller.dart';
 
 class ForgotPasswordView extends StatefulWidget {
-  const ForgotPasswordView({super.key});
+  final AuthController? authController;
+
+  const ForgotPasswordView({super.key, this.authController});
 
   @override
   State<ForgotPasswordView> createState() => _ForgotPasswordViewState();
@@ -12,7 +14,8 @@ class ForgotPasswordView extends StatefulWidget {
 
 class _ForgotPasswordViewState extends State<ForgotPasswordView> {
   late TextEditingController _emailCtrl;
-  final AuthController _authController = AuthController();
+  late final AuthController _authController =
+      widget.authController ?? AuthController();
 
   @override
   void initState() {

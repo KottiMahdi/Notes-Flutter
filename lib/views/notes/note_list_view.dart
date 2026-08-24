@@ -8,16 +8,25 @@ import 'edit_note_view.dart';
 
 class NoteListView extends StatefulWidget {
   final String categoryId;
+  final NoteController? noteController;
+  final AuthController? authController;
 
-  const NoteListView({super.key, required this.categoryId});
+  const NoteListView({
+    super.key,
+    required this.categoryId,
+    this.noteController,
+    this.authController,
+  });
 
   @override
   State<NoteListView> createState() => _NoteListViewState();
 }
 
 class _NoteListViewState extends State<NoteListView> {
-  final NoteController _noteController = NoteController();
-  final AuthController _authController = AuthController();
+  late final NoteController _noteController =
+      widget.noteController ?? NoteController();
+  late final AuthController _authController =
+      widget.authController ?? AuthController();
 
   bool _isLoading = true;
   List<NoteModel> _notes = [];

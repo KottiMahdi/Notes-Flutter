@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../controllers/auth_controller.dart';
 import 'register_form.dart';
 
 class RegisterView extends StatelessWidget {
-  const RegisterView({super.key});
+  final AuthController? authController;
+
+  const RegisterView({
+    super.key,
+    this.authController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +41,7 @@ class RegisterView extends StatelessWidget {
                   style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 10),
               // ── Register form ──────────────────────────────────────────────
-              const RegisterForm(),
+              RegisterForm(authController: authController),
               const SizedBox(height: 10),
               // ── Login link ─────────────────────────────────────────────────
               Row(

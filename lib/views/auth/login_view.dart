@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../controllers/auth_controller.dart';
 import '../widgets/custom_logo.dart';
 import 'login_form.dart';
 
 class LoginView extends StatelessWidget {
-  const LoginView({super.key});
+  final AuthController? authController;
+  final GoogleSignIn? googleSignIn;
+
+  const LoginView({
+    super.key,
+    this.authController,
+    this.googleSignIn,
+  });
 
   Future<void> _signInWithGoogle(BuildContext context) async {
-    final AuthController authController = AuthController();
+    final AuthController authController =
+        this.authController ?? AuthController(googleSignIn: googleSignIn);
     try {
       await authController.signInWithGoogle();
       if (!context.mounted) return;
@@ -50,7 +60,7 @@ class LoginView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               // ── Login Form ────────────────────────────────────────────────
-              const LoginForm(),
+              LoginForm(authController: authController),
               const SizedBox(height: 20),
               const Center(
                 child: Text(

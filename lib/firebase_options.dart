@@ -63,8 +63,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '249847083388',
     projectId: 'myapp-e91fb',
     storageBucket: 'myapp-e91fb.appspot.com',
-    androidClientId: '249847083388-edmj583o1l9f0ri7natlar313gofjqcj.apps.googleusercontent.com',
-    iosClientId: '249847083388-lrsrkgn1hv38dpqc2agc564ngts3vt4j.apps.googleusercontent.com',
+    androidClientId:
+        '249847083388-edmj583o1l9f0ri7natlar313gofjqcj.apps.googleusercontent.com',
+    iosClientId:
+        '249847083388-lrsrkgn1hv38dpqc2agc564ngts3vt4j.apps.googleusercontent.com',
     iosBundleId: 'com.example.notesManagementMobilleApplication',
   );
 
@@ -74,8 +76,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '249847083388',
     projectId: 'myapp-e91fb',
     storageBucket: 'myapp-e91fb.appspot.com',
-    androidClientId: '249847083388-edmj583o1l9f0ri7natlar313gofjqcj.apps.googleusercontent.com',
-    iosClientId: '249847083388-lrsrkgn1hv38dpqc2agc564ngts3vt4j.apps.googleusercontent.com',
+    androidClientId:
+        '249847083388-edmj583o1l9f0ri7natlar313gofjqcj.apps.googleusercontent.com',
+    iosClientId:
+        '249847083388-lrsrkgn1hv38dpqc2agc564ngts3vt4j.apps.googleusercontent.com',
     iosBundleId: 'com.example.notesManagementMobilleApplication',
   );
 
