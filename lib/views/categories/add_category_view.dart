@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../controllers/category_controller.dart';
-import '../widgets/custom_text_field.dart';
+import '../../utils/app_error_messages.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/custom_text_field.dart';
 
 class AddCategoryView extends StatefulWidget {
   final CategoryController? categoryController;
@@ -29,18 +31,30 @@ class _AddCategoryViewState extends State<AddCategoryView> {
   }
 
   Future<void> _addCategory() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || !_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
     try {
-      setState(() => _isLoading = true);
       await _categoryController.addCategory(_nameCtrl.text);
       if (!mounted) return;
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('homepage', (route) => false);
-    } catch (e) {
-      setState(() => _isLoading = false);
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('homepage', (route) => false);
+      }
+    } catch (error) {
       if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Add failed: $e")),
+        SnackBar(
+          content: Text(
+            AppErrorMessages.fromException(
+              error,
+              fallback: 'Could not add the category. Please try again.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -49,7 +63,7 @@ class _AddCategoryViewState extends State<AddCategoryView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Add Category"),
+        title: const Text('Add Category'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -59,12 +73,14 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        vertical: 20, horizontal: 25),
+                      vertical: 20,
+                      horizontal: 25,
+                    ),
                     child: CustomTextField(
-                      hintText: "Enter Name",
+                      hintText: 'Enter Name',
                       mycontroller: _nameCtrl,
                       validator: (val) {
-                        if (val == null || val.isEmpty) {
+                        if (val == null || val.trim().isEmpty) {
                           return "Can't be empty";
                         }
                         return null;
@@ -72,9 +88,9 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                     ),
                   ),
                   CustomButton(
-                    title: "Add",
-                    onPressed: _addCategory,
-                  )
+                    title: 'Add',
+                    onPressed: _isLoading ? null : _addCategory,
+                  ),
                 ],
               ),
             ),

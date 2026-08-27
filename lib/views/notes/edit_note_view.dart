@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../controllers/note_controller.dart';
-import '../widgets/custom_text_field.dart';
+import '../../utils/app_error_messages.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/custom_text_field.dart';
 import 'note_list_view.dart';
 
 class EditNoteView extends StatefulWidget {
@@ -42,20 +44,37 @@ class _EditNoteViewState extends State<EditNoteView> {
   }
 
   Future<void> _editNote() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || !_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
     try {
-      setState(() => _isLoading = true);
       await _noteController.editNote(
-          widget.categoryId, widget.noteId, _noteCtrl.text);
+        widget.categoryId,
+        widget.noteId,
+        _noteCtrl.text,
+      );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (context) => NoteListView(categoryId: widget.categoryId),
-      ));
-    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => NoteListView(categoryId: widget.categoryId),
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Update failed: $e")),
+        SnackBar(
+          content: Text(
+            AppErrorMessages.fromException(
+              error,
+              fallback: 'Could not update the note. Please try again.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -65,7 +84,7 @@ class _EditNoteViewState extends State<EditNoteView> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text("Edit Note"),
+        title: const Text('Edit Note'),
       ),
       body: SingleChildScrollView(
         reverse: true,
@@ -77,12 +96,14 @@ class _EditNoteViewState extends State<EditNoteView> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 25),
+                        vertical: 20,
+                        horizontal: 25,
+                      ),
                       child: CustomTextField(
-                        hintText: "Enter Your Note",
+                        hintText: 'Enter Your Note',
                         mycontroller: _noteCtrl,
                         validator: (val) {
-                          if (val == null || val.isEmpty) {
+                          if (val == null || val.trim().isEmpty) {
                             return "Can't be empty";
                           }
                           return null;
@@ -90,12 +111,14 @@ class _EditNoteViewState extends State<EditNoteView> {
                       ),
                     ),
                     CustomButton(
-                      title: "Save",
-                      onPressed: _editNote,
+                      title: 'Save',
+                      onPressed: _isLoading ? null : _editNote,
                     ),
                     Padding(
-                        padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom))
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom,
+                      ),
+                    ),
                   ],
                 ),
         ),

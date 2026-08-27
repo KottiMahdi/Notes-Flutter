@@ -1,8 +1,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+
 import '../../controllers/auth_controller.dart';
 import '../../controllers/note_controller.dart';
 import '../../models/note_model.dart';
+import '../../utils/app_error_messages.dart';
 import 'add_note_view.dart';
 import 'edit_note_view.dart';
 
@@ -29,39 +31,111 @@ class _NoteListViewState extends State<NoteListView> {
       widget.authController ?? AuthController();
 
   bool _isLoading = true;
+  bool _isSigningOut = false;
+  final Set<String> _deletingNoteIds = {};
   List<NoteModel> _notes = [];
 
-  Future<void> _fetchNotes() async {
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _fetchNotes({bool showLoading = false}) async {
+    if (showLoading && mounted) {
+      setState(() => _isLoading = true);
+    }
+
     try {
       final notes = await _noteController.getNotes(widget.categoryId);
+      if (!mounted) return;
       setState(() {
         _notes = notes;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading notes: $e")),
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not load notes. Please try again.',
+        ),
       );
     }
   }
 
   Future<void> _signOut() async {
-    await _authController.signOut();
+    if (_isSigningOut) return;
+
+    setState(() => _isSigningOut = true);
+    try {
+      await _authController.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSigningOut = false);
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not sign out. Please try again.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _openAddNote() async {
+    final changed = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AddNoteView(categoryId: widget.categoryId),
+      ),
+    );
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
+    if (changed == true) {
+      _showSnackBar('Note added.');
+      await _fetchNotes();
+    }
+  }
+
+  Future<void> _openEditNote(NoteModel note) async {
+    final changed = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EditNoteView(
+          categoryId: widget.categoryId,
+          noteId: note.id,
+          oldText: note.note,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (changed == true) {
+      _showSnackBar('Note updated.');
+      await _fetchNotes();
+    }
   }
 
   Future<void> _deleteNote(String noteId) async {
+    if (_deletingNoteIds.contains(noteId)) return;
+
+    setState(() => _deletingNoteIds.add(noteId));
     try {
       await _noteController.deleteNote(widget.categoryId, noteId);
-      _fetchNotes();
-    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Delete failed: $e")),
+      _showSnackBar('Note deleted.');
+      await _fetchNotes();
+    } catch (error) {
+      if (!mounted) return;
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not delete the note. Please try again.',
+        ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingNoteIds.remove(noteId));
+      }
     }
   }
 
@@ -80,22 +154,24 @@ class _NoteListViewState extends State<NoteListView> {
         child: FloatingActionButton.extended(
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
-          onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (context) => AddNoteView(categoryId: widget.categoryId),
-            ));
-          },
+          onPressed: _isLoading || _isSigningOut ? null : _openAddNote,
           icon: const Icon(Icons.notes),
-          label: const Text("Add Note"),
+          label: const Text('Add Note'),
         ),
       ),
       appBar: AppBar(
         title: const Text('Notes'),
         actions: [
           IconButton(
-            onPressed: _signOut,
-            icon: const Icon(Icons.exit_to_app),
-          )
+            onPressed: _isSigningOut ? null : _signOut,
+            icon: _isSigningOut
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.exit_to_app),
+          ),
         ],
       ),
       body: PopScope(
@@ -103,7 +179,7 @@ class _NoteListViewState extends State<NoteListView> {
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
           Navigator.of(context)
-              .pushNamedAndRemoveUntil("homepage", (route) => false);
+              .pushNamedAndRemoveUntil('homepage', (route) => false);
         },
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -111,33 +187,39 @@ class _NoteListViewState extends State<NoteListView> {
                 itemCount: _notes.length,
                 itemBuilder: (context, i) {
                   final note = _notes[i];
+                  final isDeleting = _deletingNoteIds.contains(note.id);
                   return InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => EditNoteView(
-                          categoryId: widget.categoryId,
-                          noteId: note.id,
-                          oldText: note.note,
-                        ),
-                      ));
-                    },
-                    onLongPress: () {
-                      AwesomeDialog(
-                        context: context,
-                        dialogType: DialogType.info,
-                        animType: AnimType.rightSlide,
-                        title: 'Delete',
-                        desc: 'Are you sure ? ',
-                        btnOkOnPress: () => _deleteNote(note.id),
-                        btnCancelOnPress: () {},
-                      ).show();
-                    },
-                    child: Card(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [Text(note.note)],
+                    onTap: isDeleting ? null : () => _openEditNote(note),
+                    onLongPress: isDeleting
+                        ? null
+                        : () {
+                            AwesomeDialog(
+                              context: context,
+                              dialogType: DialogType.info,
+                              animType: AnimType.rightSlide,
+                              title: 'Delete',
+                              desc: 'Are you sure ? ',
+                              btnOkOnPress: () => _deleteNote(note.id),
+                              btnCancelOnPress: () {},
+                            ).show();
+                          },
+                    child: Opacity(
+                      opacity: isDeleting ? 0.6 : 1,
+                      child: Card(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              Expanded(child: Text(note.note)),
+                              if (isDeleting)
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

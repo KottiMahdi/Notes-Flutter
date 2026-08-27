@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../controllers/note_controller.dart';
-import '../widgets/custom_text_field.dart';
+import '../../utils/app_error_messages.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/custom_text_field.dart';
 import 'note_list_view.dart';
 
 class AddNoteView extends StatefulWidget {
@@ -32,19 +34,33 @@ class _AddNoteViewState extends State<AddNoteView> {
   }
 
   Future<void> _addNote() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || !_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
     try {
-      setState(() => _isLoading = true);
       await _noteController.addNote(widget.categoryId, _noteCtrl.text);
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (context) => NoteListView(categoryId: widget.categoryId),
-      ));
-    } catch (e) {
-      setState(() => _isLoading = false);
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => NoteListView(categoryId: widget.categoryId),
+          ),
+        );
+      }
+    } catch (error) {
       if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Add failed: $e")),
+        SnackBar(
+          content: Text(
+            AppErrorMessages.fromException(
+              error,
+              fallback: 'Could not add the note. Please try again.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -54,7 +70,7 @@ class _AddNoteViewState extends State<AddNoteView> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text("Add Note"),
+        title: const Text('Add Note'),
       ),
       body: SingleChildScrollView(
         reverse: true,
@@ -66,12 +82,14 @@ class _AddNoteViewState extends State<AddNoteView> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 25),
+                        vertical: 20,
+                        horizontal: 25,
+                      ),
                       child: CustomTextField(
-                        hintText: "Enter Your Note",
+                        hintText: 'Enter Your Note',
                         mycontroller: _noteCtrl,
                         validator: (val) {
-                          if (val == null || val.isEmpty) {
+                          if (val == null || val.trim().isEmpty) {
                             return "Can't be empty";
                           }
                           return null;
@@ -79,12 +97,14 @@ class _AddNoteViewState extends State<AddNoteView> {
                       ),
                     ),
                     CustomButton(
-                      title: "Add",
-                      onPressed: _addNote,
+                      title: 'Add',
+                      onPressed: _isLoading ? null : _addNote,
                     ),
                     Padding(
-                        padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom))
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom,
+                      ),
+                    ),
                   ],
                 ),
         ),

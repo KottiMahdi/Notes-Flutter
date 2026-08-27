@@ -1,10 +1,9 @@
-// ignore_for_file: avoid_print
-
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../models/user_model.dart';
+import '../../utils/app_error_messages.dart';
 
 class RegisterForm extends StatefulWidget {
   final AuthController? authController;
@@ -22,6 +21,7 @@ class _RegisterFormState extends State<RegisterForm> {
   late TextEditingController _passwordCtrl;
   late TextEditingController _confirmPasswordCtrl;
   bool _isObscured = true;
+  bool _isLoading = false;
 
   late final AuthController _authController;
 
@@ -52,27 +52,31 @@ class _RegisterFormState extends State<RegisterForm> {
       filled: true,
       fillColor: Colors.grey.shade200,
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(50),
-          borderSide: const BorderSide(color: Colors.grey)),
+        borderRadius: BorderRadius.circular(50),
+        borderSide: const BorderSide(color: Colors.grey),
+      ),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(50),
-          borderSide: const BorderSide(color: Colors.grey)),
+        borderRadius: BorderRadius.circular(50),
+        borderSide: const BorderSide(color: Colors.grey),
+      ),
     );
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || !_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
     try {
-      if (_passwordCtrl.text == _confirmPasswordCtrl.text) {
-        await _authController.signUp(
-          email: _emailCtrl.text,
-          password: _passwordCtrl.text,
-        );
-        await _authController.saveUserDetails(UserModel(
+      await _authController.signUp(
+        email: _emailCtrl.text,
+        password: _passwordCtrl.text,
+      );
+      await _authController.saveUserDetails(
+        UserModel(
           username: _usernameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
-        ));
-      }
+        ),
+      );
       await _authController.sendEmailVerification();
       if (!mounted) return;
       AwesomeDialog(
@@ -85,20 +89,19 @@ class _RegisterFormState extends State<RegisterForm> {
           Navigator.of(context).pushReplacementNamed('login');
         },
       ).show();
-    } on Exception catch (e) {
+    } catch (error) {
       if (!mounted) return;
-      final msg = e.toString().contains('weak-password')
-          ? 'The password provided is too weak.'
-          : e.toString().contains('email-already-in-use')
-              ? 'The account already exists for that email.'
-              : 'Registration failed. Please try again.';
-      print(e);
+      setState(() => _isLoading = false);
       AwesomeDialog(
         context: context,
         dialogType: DialogType.error,
         animType: AnimType.rightSlide,
         title: 'Error',
-        desc: msg,
+        desc: AppErrorMessages.fromException(
+          error,
+          fallback:
+              'Registration failed. Please check your details and try again.',
+        ),
         btnOkOnPress: () {},
       ).show();
     }
@@ -111,11 +114,13 @@ class _RegisterFormState extends State<RegisterForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Username ───────────────────────────────────────────────────────
-          const Text('Username',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text(
+            'Username',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           const SizedBox(height: 10),
           TextFormField(
+            enabled: !_isLoading,
             controller: _usernameCtrl,
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -128,11 +133,13 @@ class _RegisterFormState extends State<RegisterForm> {
             decoration: _inputDecoration('Enter Your Username'),
           ),
           const SizedBox(height: 20),
-          // ── Email ──────────────────────────────────────────────────────────
-          const Text('Email',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text(
+            'Email',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           const SizedBox(height: 10),
           TextFormField(
+            enabled: !_isLoading,
             keyboardType: TextInputType.emailAddress,
             controller: _emailCtrl,
             style: const TextStyle(color: Colors.black),
@@ -147,11 +154,13 @@ class _RegisterFormState extends State<RegisterForm> {
             decoration: _inputDecoration('Enter Your Email'),
           ),
           const SizedBox(height: 20),
-          // ── Password ───────────────────────────────────────────────────────
-          const Text('Password',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text(
+            'Password',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           const SizedBox(height: 10),
           TextFormField(
+            enabled: !_isLoading,
             controller: _passwordCtrl,
             obscureText: _isObscured,
             validator: (value) {
@@ -166,21 +175,28 @@ class _RegisterFormState extends State<RegisterForm> {
             style: const TextStyle(color: Colors.black),
             decoration: _inputDecoration('Enter Your Password').copyWith(
               suffixIcon: TextButton(
-                onPressed: () => setState(() => _isObscured = !_isObscured),
-                child: Text(_isObscured ? 'SHOW' : 'HIDE',
-                    style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
+                onPressed: _isLoading
+                    ? null
+                    : () => setState(() => _isObscured = !_isObscured),
+                child: Text(
+                  _isObscured ? 'SHOW' : 'HIDE',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 20),
-          // ── Confirm Password ───────────────────────────────────────────────
-          const Text('Confirm Password',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text(
+            'Confirm Password',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           const SizedBox(height: 10),
           TextFormField(
+            enabled: !_isLoading,
             obscureText: _isObscured,
             controller: _confirmPasswordCtrl,
             validator: (value) {
@@ -198,30 +214,46 @@ class _RegisterFormState extends State<RegisterForm> {
             style: const TextStyle(color: Colors.black),
             decoration: _inputDecoration('Confirm Your Password').copyWith(
               suffixIcon: TextButton(
-                onPressed: () => setState(() => _isObscured = !_isObscured),
-                child: Text(_isObscured ? 'SHOW' : 'HIDE',
-                    style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
+                onPressed: _isLoading
+                    ? null
+                    : () => setState(() => _isObscured = !_isObscured),
+                child: Text(
+                  _isObscured ? 'SHOW' : 'HIDE',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 20),
-          // ── Sign-up button ─────────────────────────────────────────────────
           Row(
             children: [
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(20))),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                    ),
                     backgroundColor: Colors.orangeAccent,
                     padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
-                  onPressed: _register,
-                  child: const Text('Sign Up',
-                      style: TextStyle(color: Colors.white)),
+                  onPressed: _isLoading ? null : _register,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Sign Up',
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
               ),
             ],

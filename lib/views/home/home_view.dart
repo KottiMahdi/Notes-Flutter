@@ -1,8 +1,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+
 import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../models/category_model.dart';
+import '../../utils/app_error_messages.dart';
 import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
 
@@ -27,39 +29,106 @@ class _HomeViewState extends State<HomeView> {
       widget.authController ?? AuthController();
 
   bool _isLoading = true;
+  bool _isSigningOut = false;
+  final Set<String> _deletingCategoryIds = {};
   List<CategoryModel> _categories = [];
 
-  Future<void> _fetchCategories() async {
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _fetchCategories({bool showLoading = false}) async {
+    if (showLoading && mounted) {
+      setState(() => _isLoading = true);
+    }
+
     try {
       final categories = await _categoryController.getCategories();
+      if (!mounted) return;
       setState(() {
         _categories = categories;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading categories: $e")),
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not load categories. Please try again.',
+        ),
       );
     }
   }
 
   Future<void> _signOut() async {
-    await _authController.signOut();
+    if (_isSigningOut) return;
+
+    setState(() => _isSigningOut = true);
+    try {
+      await _authController.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSigningOut = false);
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not sign out. Please try again.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _openAddCategory() async {
+    final changed = await Navigator.of(context).pushNamed('addCategory');
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
+    if (changed == true) {
+      _showSnackBar('Category added.');
+      await _fetchCategories();
+    }
+  }
+
+  Future<void> _openEditCategory(CategoryModel category) async {
+    final changed = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => UpdateCategoryView(
+          docId: category.id,
+          oldName: category.name,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (changed == true) {
+      _showSnackBar('Category updated.');
+      await _fetchCategories();
+    }
   }
 
   Future<void> _deleteCategory(String id) async {
+    if (_deletingCategoryIds.contains(id)) return;
+
+    setState(() => _deletingCategoryIds.add(id));
     try {
       await _categoryController.deleteCategory(id);
-      _fetchCategories();
-    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Delete failed: $e")),
+      _showSnackBar('Category deleted.');
+      await _fetchCategories();
+    } catch (error) {
+      if (!mounted) return;
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not delete the category. Please try again.',
+        ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingCategoryIds.remove(id));
+      }
     }
   }
 
@@ -78,20 +147,24 @@ class _HomeViewState extends State<HomeView> {
         child: FloatingActionButton.extended(
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
-          onPressed: () {
-            Navigator.of(context).pushNamed("addCategory");
-          },
+          onPressed: _isLoading || _isSigningOut ? null : _openAddCategory,
           icon: const Icon(Icons.add),
-          label: const Text("Add Categorie"),
+          label: const Text('Add Categorie'),
         ),
       ),
       appBar: AppBar(
         title: const Text('List of categories'),
         actions: [
           IconButton(
-            onPressed: _signOut,
-            icon: const Icon(Icons.exit_to_app),
-          )
+            onPressed: _isSigningOut ? null : _signOut,
+            icon: _isSigningOut
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.exit_to_app),
+          ),
         ],
       ),
       body: _isLoading
@@ -104,45 +177,56 @@ class _HomeViewState extends State<HomeView> {
               ),
               itemBuilder: (context, i) {
                 final category = _categories[i];
+                final isDeleting = _deletingCategoryIds.contains(category.id);
                 return InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) =>
-                          NoteListView(categoryId: category.id),
-                    ));
-                  },
-                  onLongPress: () {
-                    AwesomeDialog(
-                      context: context,
-                      dialogType: DialogType.info,
-                      animType: AnimType.rightSlide,
-                      title: 'Alert',
-                      desc: 'Select Your Choice ',
-                      btnOkText: "Edit",
-                      btnOkOnPress: () async {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => UpdateCategoryView(
-                            docId: category.id,
-                            oldName: category.name,
-                          ),
-                        ));
-                      },
-                      btnCancelText: "Delete",
-                      btnCancelOnPress: () => _deleteCategory(category.id),
-                    ).show();
-                  },
-                  child: Card(
-                    child: Container(
-                      padding: const EdgeInsets.all(15),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Image.asset(
-                            "assets/img/notes_752326.png",
-                            height: 95,
-                          ),
-                          Text(category.name)
-                        ],
+                  onTap: isDeleting
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NoteListView(categoryId: category.id),
+                            ),
+                          );
+                        },
+                  onLongPress: isDeleting
+                      ? null
+                      : () {
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.info,
+                            animType: AnimType.rightSlide,
+                            title: 'Alert',
+                            desc: 'Select Your Choice ',
+                            btnOkText: 'Edit',
+                            btnOkOnPress: () => _openEditCategory(category),
+                            btnCancelText: 'Delete',
+                            btnCancelOnPress: () =>
+                                _deleteCategory(category.id),
+                          ).show();
+                        },
+                  child: Opacity(
+                    opacity: isDeleting ? 0.6 : 1,
+                    child: Card(
+                      child: Container(
+                        padding: const EdgeInsets.all(15),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (isDeleting)
+                              const SizedBox(
+                                height: 95,
+                                child:
+                                    Center(child: CircularProgressIndicator()),
+                              )
+                            else
+                              Image.asset(
+                                'assets/img/notes_752326.png',
+                                height: 95,
+                              ),
+                            Text(category.name),
+                          ],
+                        ),
                       ),
                     ),
                   ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../controllers/category_controller.dart';
-import '../widgets/custom_text_field.dart';
+import '../../utils/app_error_messages.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/custom_text_field.dart';
 
 class UpdateCategoryView extends StatefulWidget {
   final String docId;
@@ -39,18 +41,30 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
   }
 
   Future<void> _updateCategory() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || !_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
     try {
-      setState(() => _isLoading = true);
       await _categoryController.updateCategory(widget.docId, _nameCtrl.text);
       if (!mounted) return;
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('homepage', (route) => false);
-    } catch (e) {
-      setState(() => _isLoading = false);
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('homepage', (route) => false);
+      }
+    } catch (error) {
       if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Update failed: $e")),
+        SnackBar(
+          content: Text(
+            AppErrorMessages.fromException(
+              error,
+              fallback: 'Could not update the category. Please try again.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -60,7 +74,7 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text("Edit Category"),
+        title: const Text('Edit Category'),
       ),
       body: SingleChildScrollView(
         reverse: true,
@@ -72,12 +86,14 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 25),
+                        vertical: 20,
+                        horizontal: 25,
+                      ),
                       child: CustomTextField(
-                        hintText: "Enter name",
+                        hintText: 'Enter name',
                         mycontroller: _nameCtrl,
                         validator: (val) {
-                          if (val == null || val.isEmpty) {
+                          if (val == null || val.trim().isEmpty) {
                             return "Can't be empty";
                           }
                           return null;
@@ -85,12 +101,14 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                       ),
                     ),
                     CustomButton(
-                      title: "Save",
-                      onPressed: _updateCategory,
+                      title: 'Save',
+                      onPressed: _isLoading ? null : _updateCategory,
                     ),
                     Padding(
-                        padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom))
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom,
+                      ),
+                    ),
                   ],
                 ),
         ),
