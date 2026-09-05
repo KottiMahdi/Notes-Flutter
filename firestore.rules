@@ -10,8 +10,9 @@ service cloud.firestore {
     }
 
     match /Users/{userId} {
-      allow read, update, delete: if isOwner(userId);
+      allow read, delete: if isOwner(userId);
       allow create: if isSignedIn() && request.resource.data.Email is string && request.resource.data.Username is string && request.resource.data.uid == request.auth.uid;
+      allow update: if isOwner(userId) && request.resource.data.uid == request.auth.uid;
     }
 
     match /categories/{categoryId} {

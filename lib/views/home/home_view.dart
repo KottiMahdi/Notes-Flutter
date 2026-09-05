@@ -5,6 +5,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../models/category_model.dart';
 import '../../utils/app_error_messages.dart';
+import '../../utils/theme_mode_scope.dart';
 import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
 
@@ -30,6 +31,7 @@ class _HomeViewState extends State<HomeView> {
 
   bool _isLoading = true;
   bool _isSigningOut = false;
+  bool _isDeletingAccount = false;
   final Set<String> _deletingCategoryIds = {};
   List<CategoryModel> _categories = [];
 
@@ -78,6 +80,47 @@ class _HomeViewState extends State<HomeView> {
         AppErrorMessages.fromException(
           error,
           fallback: 'Could not sign out. Please try again.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    if (_isDeletingAccount || _isSigningOut) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+          'This permanently deletes your profile, categories, and notes.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete account'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await _authController.deleteAccount();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isDeletingAccount = false);
+      _showSnackBar(
+        AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not delete your account. Please try again.',
         ),
       );
     }
@@ -155,8 +198,21 @@ class _HomeViewState extends State<HomeView> {
       appBar: AppBar(
         title: const Text('List of categories'),
         actions: [
+          const ThemeModeToggle(),
           IconButton(
-            onPressed: _isSigningOut ? null : _signOut,
+            tooltip: 'Delete account',
+            onPressed: _isDeletingAccount ? null : _deleteAccount,
+            icon: _isDeletingAccount
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.delete_forever),
+          ),
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: _isSigningOut || _isDeletingAccount ? null : _signOut,
             icon: _isSigningOut
                 ? const SizedBox(
                     width: 20,

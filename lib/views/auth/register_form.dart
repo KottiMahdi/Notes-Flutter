@@ -44,20 +44,23 @@ class _RegisterFormState extends State<RegisterForm> {
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(String hint) {
+  InputDecoration _inputDecoration(BuildContext context, String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+      hintStyle: TextStyle(
+        fontSize: 14,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
       contentPadding: const EdgeInsets.symmetric(vertical: 2, horizontal: 20),
       filled: true,
-      fillColor: Colors.grey.shade200,
+      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(50),
-        borderSide: const BorderSide(color: Colors.grey),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(50),
-        borderSide: const BorderSide(color: Colors.grey),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
       ),
     );
   }
@@ -130,7 +133,7 @@ class _RegisterFormState extends State<RegisterForm> {
               }
               return null;
             },
-            decoration: _inputDecoration('Enter Your Username'),
+            decoration: _inputDecoration(context, 'Enter Your Username'),
           ),
           const SizedBox(height: 20),
           const Text(
@@ -142,7 +145,7 @@ class _RegisterFormState extends State<RegisterForm> {
             enabled: !_isLoading,
             keyboardType: TextInputType.emailAddress,
             controller: _emailCtrl,
-            style: const TextStyle(color: Colors.black),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email address';
@@ -151,7 +154,7 @@ class _RegisterFormState extends State<RegisterForm> {
               }
               return null;
             },
-            decoration: _inputDecoration('Enter Your Email'),
+            decoration: _inputDecoration(context, 'Enter Your Email'),
           ),
           const SizedBox(height: 20),
           const Text(
@@ -172,16 +175,17 @@ class _RegisterFormState extends State<RegisterForm> {
               }
               return null;
             },
-            style: const TextStyle(color: Colors.black),
-            decoration: _inputDecoration('Enter Your Password').copyWith(
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            decoration:
+                _inputDecoration(context, 'Enter Your Password').copyWith(
               suffixIcon: TextButton(
                 onPressed: _isLoading
                     ? null
                     : () => setState(() => _isObscured = !_isObscured),
                 child: Text(
                   _isObscured ? 'SHOW' : 'HIDE',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -211,16 +215,17 @@ class _RegisterFormState extends State<RegisterForm> {
               }
               return null;
             },
-            style: const TextStyle(color: Colors.black),
-            decoration: _inputDecoration('Confirm Your Password').copyWith(
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            decoration:
+                _inputDecoration(context, 'Confirm Your Password').copyWith(
               suffixIcon: TextButton(
                 onPressed: _isLoading
                     ? null
                     : () => setState(() => _isObscured = !_isObscured),
                 child: Text(
                   _isObscured ? 'SHOW' : 'HIDE',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),

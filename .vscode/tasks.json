@@ -17,6 +17,96 @@
 			"args": [
 				"analyze"
 			]
+		},
+		{
+			"label": "focused-flutter-test",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test",
+				"test/widget/mvp_auth_flows_test.dart"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "full-flutter-test",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "release-bundle-check",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"build",
+				"appbundle",
+				"--release"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "account-delete-test",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test",
+				"test/controllers/auth_controller_test.dart"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "full-flutter-test-final",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "dark-mode-tests",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test",
+				"test/widget/auth_views_test.dart",
+				"test/widget/mvp_auth_flows_test.dart",
+				"test/integration/startup_and_routes_test.dart"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "dark-mode-tests-final",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test",
+				"test/widget/auth_views_test.dart",
+				"test/widget/mvp_auth_flows_test.dart",
+				"test/integration/startup_and_routes_test.dart"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "full-flutter-test-dark-mode",
+			"type": "shell",
+			"command": "D:\\Program Files\\flutter\\bin\\flutter.bat",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }

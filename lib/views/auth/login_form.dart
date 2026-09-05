@@ -81,7 +81,7 @@ class _LoginFormState extends State<LoginForm> {
             enabled: !_isLoading,
             keyboardType: TextInputType.emailAddress,
             controller: _emailCtrl,
-            style: const TextStyle(color: Colors.black),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email address';
@@ -92,18 +92,25 @@ class _LoginFormState extends State<LoginForm> {
             },
             decoration: InputDecoration(
               hintText: 'Enter Your Email',
-              hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+              hintStyle: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 2, horizontal: 20),
               filled: true,
-              fillColor: Colors.grey.shade200,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(50),
-                borderSide: const BorderSide(color: Colors.grey),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(50),
-                borderSide: const BorderSide(color: Colors.grey),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
               ),
             ),
           ),
@@ -117,7 +124,7 @@ class _LoginFormState extends State<LoginForm> {
             enabled: !_isLoading,
             controller: _passwordCtrl,
             obscureText: _isObscured,
-            style: const TextStyle(color: Colors.black),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your password';
@@ -133,26 +140,33 @@ class _LoginFormState extends State<LoginForm> {
                     : () => setState(() => _isObscured = !_isObscured),
                 child: Text(
                   _isObscured ? 'SHOW' : 'HIDE',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
                 ),
               ),
               hintText: 'Enter Your Password',
-              hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+              hintStyle: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 2, horizontal: 20),
               filled: true,
-              fillColor: Colors.grey.shade200,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(50),
-                borderSide: const BorderSide(color: Colors.grey),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(50),
-                borderSide: const BorderSide(color: Colors.grey),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
               ),
             ),
           ),
@@ -162,9 +176,12 @@ class _LoginFormState extends State<LoginForm> {
               onPressed: _isLoading
                   ? null
                   : () => Navigator.of(context).pushNamed('forgotPWD'),
-              child: const Text(
+              child: Text(
                 'Forgot Password ?',
-                style: TextStyle(fontSize: 14, color: Colors.black),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ),

@@ -133,6 +133,36 @@ class AuthController {
     await _auth.signOut();
   }
 
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No authenticated user available to delete.',
+      );
+    }
+
+    final categories = await _firestore
+        .collection('categories')
+        .where('userId', isEqualTo: user.uid)
+        .get();
+    final batch = _firestore.batch();
+
+    for (final category in categories.docs) {
+      final notes = await category.reference.collection('note').get();
+      for (final note in notes.docs) {
+        batch.delete(note.reference);
+      }
+      batch.delete(category.reference);
+    }
+
+    batch.delete(_firestore.collection('Users').doc(user.uid));
+    await batch.commit();
+    await user.delete();
+    await _auth.signOut();
+    await _signOutGoogleSession();
+  }
+
   User? get currentUser => _auth.currentUser;
 
   Stream<User?> authStateChanges() => _auth.authStateChanges();

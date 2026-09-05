@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'utils/app_error_messages.dart';
+import 'utils/theme_mode_scope.dart';
 import 'views/auth/forgot_password_view.dart';
 import 'views/auth/login_view.dart';
 import 'views/auth/register_view.dart';
@@ -15,7 +17,7 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final Future<FirebaseApp> Function()? firebaseInitializer;
   final FirebaseAuth? auth;
 
@@ -26,32 +28,92 @@ class MyApp extends StatelessWidget {
   });
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final ValueNotifier<ThemeMode> _themeMode =
+      ValueNotifier<ThemeMode>(ThemeMode.light);
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreThemeMode();
+    _themeMode.addListener(_persistThemeMode);
+  }
+
+  Future<void> _restoreThemeMode() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    _themeMode.value = preferences.getBool('dark_mode') == true
+        ? ThemeMode.dark
+        : ThemeMode.light;
+  }
+
+  Future<void> _persistThemeMode() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool('dark_mode', _themeMode.value == ThemeMode.dark);
+  }
+
+  @override
+  void dispose() {
+    _themeMode.removeListener(_persistThemeMode);
+    _themeMode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Notes App',
-      theme: ThemeData(
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.grey[50],
-          titleTextStyle: const TextStyle(
-            color: Colors.orange,
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: _themeMode,
+      builder: (context, mode, child) => ThemeModeScope(
+        notifier: _themeMode,
+        child: MaterialApp(
+          title: 'Notes App',
+          themeMode: mode,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+            scaffoldBackgroundColor: Colors.white,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.orange,
+              titleTextStyle: TextStyle(
+                color: Colors.orange,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          iconTheme: const IconThemeData(color: Colors.orange),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.orange,
+              brightness: Brightness.dark,
+            ),
+            scaffoldBackgroundColor: const Color(0xFF121212),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1E1E1E),
+              foregroundColor: Colors.orange,
+              titleTextStyle: TextStyle(
+                color: Colors.orange,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          debugShowCheckedModeBanner: false,
+          home: _AppBootstrap(
+            firebaseInitializer: widget.firebaseInitializer,
+            auth: widget.auth,
+          ),
+          routes: {
+            'homepage': (context) => const HomeView(),
+            'addCategory': (context) => const AddCategoryView(),
+            'registre': (context) => const RegisterView(),
+            'login': (context) => const LoginView(),
+            'forgotPWD': (context) => const ForgotPasswordView(),
+          },
         ),
       ),
-      debugShowCheckedModeBanner: false,
-      home: _AppBootstrap(
-        firebaseInitializer: firebaseInitializer,
-        auth: auth,
-      ),
-      routes: {
-        'homepage': (context) => const HomeView(),
-        'addCategory': (context) => const AddCategoryView(),
-        'registre': (context) => const RegisterView(),
-        'login': (context) => const LoginView(),
-        'forgotPWD': (context) => const ForgotPasswordView(),
-      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../utils/app_error_messages.dart';
+import '../../utils/theme_mode_scope.dart';
 import '../widgets/custom_logo.dart';
 import 'login_form.dart';
 
@@ -58,7 +59,7 @@ class _LoginViewState extends State<LoginView> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
+      appBar: AppBar(actions: const [ThemeModeToggle()]),
       body: SingleChildScrollView(
         reverse: true,
         child: Padding(
@@ -66,7 +67,6 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 50),
               const CustomLogo(),
               const SizedBox(height: 20),
               const Text(
@@ -77,18 +77,22 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Login To Continue Using The App',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 20),
               LoginForm(authController: authController),
               const SizedBox(height: 20),
-              const Center(
+              Center(
                 child: Text(
                   'OR',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -97,9 +101,9 @@ class _LoginViewState extends State<LoginView> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                color: Colors.grey.shade100,
-                disabledColor: Colors.grey.shade200,
-                textColor: Colors.black,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                disabledColor: Theme.of(context).colorScheme.surfaceContainer,
+                textColor: Theme.of(context).colorScheme.onSurface,
                 onPressed:
                     _isGoogleLoading ? null : () => _signInWithGoogle(context),
                 child: Row(

@@ -137,5 +137,82 @@ void main() {
 
       expect(controller.currentUser, isNull);
     });
+
+    test('deleteAccount removes the user data and auth account', () async {
+      final auth = MockFirebaseAuth(
+        mockUser: MockUser(
+          uid: 'delete-user',
+          email: 'delete@example.com',
+          isEmailVerified: true,
+        ),
+        signedIn: true,
+      );
+      final firestore = FakeFirebaseFirestore();
+      await firestore.collection('Users').doc('delete-user').set({
+        'uid': 'delete-user',
+        'Username': 'Delete Me',
+        'Email': 'delete@example.com',
+      });
+      await firestore.collection('Users').doc('keep-user').set({
+        'uid': 'keep-user',
+        'Username': 'Keep Me',
+        'Email': 'keep@example.com',
+      });
+      final category = await firestore.collection('categories').add({
+        'name': 'Private',
+        'userId': 'delete-user',
+      });
+      await category.collection('note').add({
+        'note': 'Private note',
+        'userId': 'delete-user',
+      });
+      await firestore.collection('categories').add({
+        'name': 'Other user category',
+        'userId': 'keep-user',
+      });
+
+      final controller = AuthController(auth: auth, firestore: firestore);
+      await controller.deleteAccount();
+
+      expect(auth.currentUser, isNull);
+      expect(
+        (await firestore.collection('Users').doc('delete-user').get()).exists,
+        isFalse,
+      );
+      expect(
+        (await firestore.collection('Users').doc('keep-user').get()).exists,
+        isTrue,
+      );
+      expect(
+        (await firestore.collection('categories').doc(category.id).get())
+            .exists,
+        isFalse,
+      );
+      expect(
+        (await firestore.collection('categories').get())
+            .docs
+            .single
+            .data()['userId'],
+        'keep-user',
+      );
+    });
+
+    test('deleteAccount requires an authenticated user', () async {
+      final controller = AuthController(
+        auth: MockFirebaseAuth(),
+        firestore: FakeFirebaseFirestore(),
+      );
+
+      expect(
+        controller.deleteAccount,
+        throwsA(
+          isA<FirebaseAuthException>().having(
+            (error) => error.code,
+            'code',
+            'no-current-user',
+          ),
+        ),
+      );
+    });
   });
 }

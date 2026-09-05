@@ -58,9 +58,16 @@ void main() {
       final editedNotes = await ownerNoteController.getNotes(categoryId);
       expect(editedNotes.first.note, 'Edited note');
 
-      await ownerNoteController.deleteNote(categoryId, editedNotes.first.id);
-      final afterDelete = await ownerNoteController.getNotes(categoryId);
-      expect(afterDelete, isEmpty);
+      expect(
+        () => intruderNoteController.editNote(
+            categoryId, editedNotes.first.id, 'hacked'),
+        throwsA(isA<FirebaseException>()),
+      );
+      expect(
+        () =>
+            intruderNoteController.deleteNote(categoryId, editedNotes.first.id),
+        throwsA(isA<FirebaseException>()),
+      );
 
       final intruderCategories =
           await intruderCategoryController.getCategories();
@@ -78,6 +85,9 @@ void main() {
         () => intruderCategoryController.deleteCategory(categoryId),
         throwsA(isA<FirebaseException>()),
       );
+      await ownerNoteController.deleteNote(categoryId, editedNotes.first.id);
+      final afterDelete = await ownerNoteController.getNotes(categoryId);
+      expect(afterDelete, isEmpty);
     });
   });
 }
