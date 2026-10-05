@@ -62,6 +62,7 @@ class _AddCategoryViewState extends State<AddCategoryView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Add Category'),
       ),
@@ -96,12 +97,18 @@ class _AddCategoryViewState extends State<AddCategoryView> {
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: CustomButton(
-                    title: 'Add',
-                    onPressed: _addCategory,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: CustomButton(
+                      title: 'Add',
+                      onPressed: _addCategory,
+                    ),
                   ),
                 ),
               ),

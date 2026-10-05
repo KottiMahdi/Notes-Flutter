@@ -68,6 +68,7 @@ class _AddNoteViewState extends State<AddNoteView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Add Note'),
       ),
@@ -103,12 +104,18 @@ class _AddNoteViewState extends State<AddNoteView> {
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: CustomButton(
-                    title: 'Add',
-                    onPressed: _addNote,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: CustomButton(
+                      title: 'Add',
+                      onPressed: _addNote,
+                    ),
                   ),
                 ),
               ),

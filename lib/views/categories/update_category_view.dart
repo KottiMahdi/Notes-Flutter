@@ -72,6 +72,7 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Edit Category'),
       ),
@@ -107,12 +108,18 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: CustomButton(
-                    title: 'Save',
-                    onPressed: _updateCategory,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: CustomButton(
+                      title: 'Save',
+                      onPressed: _updateCategory,
+                    ),
                   ),
                 ),
               ),

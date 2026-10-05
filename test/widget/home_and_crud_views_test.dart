@@ -74,20 +74,23 @@ Future<void> _expectActionAboveKeyboard(
 ) async {
   tester.view.physicalSize = const Size(400, 800);
   tester.view.devicePixelRatio = 1;
-  tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+  tester.view.resetViewInsets();
+  await tester.pump();
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetViewInsets);
 
   await tester.pumpWidget(MaterialApp(home: view));
-  await tester.pump();
+  final actionBottomBeforeKeyboard = tester.getRect(find.text(action)).bottom;
+  tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+  await tester.pumpAndSettle();
 
-  final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-  expect(scaffold.bottomNavigationBar, isNotNull);
-
-  final actionBottom = tester.getRect(find.text(action)).bottom;
-  expect(actionBottom, greaterThan(400));
-  expect(actionBottom, lessThanOrEqualTo(500));
+  final actionRect = tester.getRect(find.text(action));
+  final keyboardTop = tester.view.physicalSize.height -
+      tester.view.viewInsets.bottom / tester.view.devicePixelRatio;
+  expect(actionRect.bottom, lessThan(actionBottomBeforeKeyboard));
+  expect(actionRect.top, greaterThan(0));
+  expect(actionRect.bottom, lessThanOrEqualTo(keyboardTop));
 }
 
 void main() {

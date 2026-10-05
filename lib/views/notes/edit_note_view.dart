@@ -82,6 +82,7 @@ class _EditNoteViewState extends State<EditNoteView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Edit Note'),
       ),
@@ -117,12 +118,18 @@ class _EditNoteViewState extends State<EditNoteView> {
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: CustomButton(
-                    title: 'Save',
-                    onPressed: _editNote,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: CustomButton(
+                      title: 'Save',
+                      onPressed: _editNote,
+                    ),
                   ),
                 ),
               ),
