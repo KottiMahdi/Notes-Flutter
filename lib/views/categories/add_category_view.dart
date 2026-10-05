@@ -67,31 +67,43 @@ class _AddCategoryViewState extends State<AddCategoryView> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 25,
+          : SingleChildScrollView(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 25,
+                      ),
+                      child: CustomTextField(
+                        hintText: 'Enter Name',
+                        mycontroller: _nameCtrl,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return "Can't be empty";
+                          }
+                          return null;
+                        },
+                      ),
                     ),
-                    child: CustomTextField(
-                      hintText: 'Enter Name',
-                      mycontroller: _nameCtrl,
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return "Can't be empty";
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  CustomButton(
+                  ],
+                ),
+              ),
+            ),
+      bottomNavigationBar: _isLoading
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: CustomButton(
                     title: 'Add',
-                    onPressed: _isLoading ? null : _addCategory,
+                    onPressed: _addCategory,
                   ),
-                ],
+                ),
               ),
             ),
     );
