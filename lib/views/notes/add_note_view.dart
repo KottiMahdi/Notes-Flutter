@@ -96,19 +96,30 @@ class _AddNoteViewState extends State<AddNoteView> {
                         },
                       ),
                     ),
-                    CustomButton(
-                      title: 'Add',
-                      onPressed: _isLoading ? null : _addNote,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).viewInsets.bottom,
-                      ),
-                    ),
                   ],
                 ),
         ),
       ),
+      bottomNavigationBar: _isLoading
+          ? null
+          : SafeArea(
+              top: false,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: CustomButton(
+                      title: 'Add',
+                      onPressed: _addNote,
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

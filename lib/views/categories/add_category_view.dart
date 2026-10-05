@@ -62,36 +62,55 @@ class _AddCategoryViewState extends State<AddCategoryView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Add Category'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 25,
+          : SingleChildScrollView(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 25,
+                      ),
+                      child: CustomTextField(
+                        hintText: 'Enter Name',
+                        mycontroller: _nameCtrl,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return "Can't be empty";
+                          }
+                          return null;
+                        },
+                      ),
                     ),
-                    child: CustomTextField(
-                      hintText: 'Enter Name',
-                      mycontroller: _nameCtrl,
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return "Can't be empty";
-                        }
-                        return null;
-                      },
+                  ],
+                ),
+              ),
+            ),
+      bottomNavigationBar: _isLoading
+          ? null
+          : SafeArea(
+              top: false,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: CustomButton(
+                      title: 'Add',
+                      onPressed: _addCategory,
                     ),
                   ),
-                  CustomButton(
-                    title: 'Add',
-                    onPressed: _isLoading ? null : _addCategory,
-                  ),
-                ],
+                ),
               ),
             ),
     );

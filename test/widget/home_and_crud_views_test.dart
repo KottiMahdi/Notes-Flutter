@@ -67,8 +67,70 @@ Widget _wrapWithApp(Widget child) {
   );
 }
 
+Future<void> _expectActionAboveKeyboard(
+  WidgetTester tester,
+  Widget view,
+  String action,
+) async {
+  tester.view.physicalSize = const Size(400, 800);
+  tester.view.devicePixelRatio = 1;
+  tester.view.resetViewInsets();
+  await tester.pump();
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetViewInsets);
+
+  await tester.pumpWidget(MaterialApp(home: view));
+  final actionBottomBeforeKeyboard = tester.getRect(find.text(action)).bottom;
+  tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+  await tester.pumpAndSettle();
+
+  final actionRect = tester.getRect(find.text(action));
+  final keyboardTop = tester.view.physicalSize.height -
+      tester.view.viewInsets.bottom / tester.view.devicePixelRatio;
+  expect(actionRect.bottom, lessThan(actionBottomBeforeKeyboard));
+  expect(actionRect.top, greaterThan(0));
+  expect(actionRect.bottom, lessThanOrEqualTo(keyboardTop));
+}
+
 void main() {
   group('Home and CRUD view widgets', () {
+    testWidgets('category and note actions stay above the keyboard',
+        (tester) async {
+      await _expectActionAboveKeyboard(
+        tester,
+        AddCategoryView(categoryController: _TestCategoryController()),
+        'Add',
+      );
+      await _expectActionAboveKeyboard(
+        tester,
+        UpdateCategoryView(
+          docId: 'cat-1',
+          oldName: 'Old category',
+          categoryController: _TestCategoryController(),
+        ),
+        'Save',
+      );
+      await _expectActionAboveKeyboard(
+        tester,
+        AddNoteView(
+          categoryId: 'category-1',
+          noteController: _TestNoteController(),
+        ),
+        'Add',
+      );
+      await _expectActionAboveKeyboard(
+        tester,
+        EditNoteView(
+          categoryId: 'category-1',
+          noteId: 'note-1',
+          oldText: 'Old note',
+          noteController: _TestNoteController(),
+        ),
+        'Save',
+      );
+    });
+
     testWidgets('home view renders category header and actions',
         (tester) async {
       await tester.pumpWidget(
