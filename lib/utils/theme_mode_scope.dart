@@ -23,10 +23,19 @@ class ThemeModeToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final mode = ThemeModeScope.of(context);
     final isDark = mode.value == ThemeMode.dark;
-    return IconButton(
-      tooltip: isDark ? 'Use light mode' : 'Use dark mode',
-      onPressed: () => mode.value = isDark ? ThemeMode.light : ThemeMode.dark,
-      icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+    final colors = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: IconButton(
+        tooltip: isDark ? 'Use light mode' : 'Use dark mode',
+        onPressed: () => mode.value = isDark ? ThemeMode.light : ThemeMode.dark,
+        icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+      ),
     );
   }
 }

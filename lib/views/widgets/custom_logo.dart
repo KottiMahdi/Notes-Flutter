@@ -6,18 +6,11 @@ class CustomLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Container(
-        alignment: Alignment.center,
-        height: 80,
-        width: 80,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: Colors.orange.shade300,
-            borderRadius: BorderRadius.circular(70)),
-        child: Image.asset(
-          'assets/img/bloc-notes.png',
-          height: 50,
-        ),
+      child: Image.asset(
+        'assets/img/screen.png',
+        height: 96,
+        width: 96,
+        fit: BoxFit.contain,
       ),
     );
   }

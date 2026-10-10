@@ -83,13 +83,26 @@ class NoteController {
     final snapshot = await _noteCollection(categoryId)
         .where('userId', isEqualTo: _auth.currentUser!.uid)
         .get();
-    return snapshot.docs
+    final notes = snapshot.docs
         .map((doc) => NoteModel.fromMap(doc.id, doc.data()))
         .toList();
+    notes.sort((a, b) {
+      final aCreatedAt = a.createdAt;
+      final bCreatedAt = b.createdAt;
+      if (aCreatedAt == null && bCreatedAt == null) return 0;
+      if (aCreatedAt == null) return 1;
+      if (bCreatedAt == null) return -1;
+      return bCreatedAt.compareTo(aCreatedAt);
+    });
+    return notes;
   }
 
   // ── Add a note ────────────────────────────────────────────────────────────
-  Future<void> addNote(String categoryId, String noteText) async {
+  Future<void> addNote(
+    String categoryId,
+    String noteText, {
+    String title = '',
+  }) async {
     await _requireCurrentUser();
     await _ensureCategoryOwnership(categoryId);
 
@@ -99,13 +112,21 @@ class NoteController {
           noteText, 'noteText', 'Note text cannot be empty.');
     }
 
-    await _noteCollection(categoryId)
-        .add({'note': trimmed, 'userId': _auth.currentUser!.uid});
+    await _noteCollection(categoryId).add({
+      'note': trimmed,
+      'title': title.trim(),
+      'userId': _auth.currentUser!.uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   // ── Update a note ─────────────────────────────────────────────────────────
   Future<void> editNote(
-      String categoryId, String noteId, String newText) async {
+    String categoryId,
+    String noteId,
+    String newText, {
+    String title = '',
+  }) async {
     await _requireCurrentUser();
     await _ensureNoteOwnership(categoryId, noteId);
 
@@ -117,6 +138,7 @@ class NoteController {
 
     await _noteCollection(categoryId).doc(noteId).update({
       'note': trimmed,
+      'title': title.trim(),
       'userId': _auth.currentUser!.uid,
     });
   }

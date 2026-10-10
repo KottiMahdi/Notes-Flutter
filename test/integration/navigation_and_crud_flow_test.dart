@@ -36,7 +36,7 @@ void main() {
         ),
       );
 
-      expect(find.text('List of categories'), findsOneWidget);
+      expect(find.text('All Categories'), findsOneWidget);
     });
 
     testWidgets('note list view can be created with category id',

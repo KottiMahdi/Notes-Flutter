@@ -66,8 +66,32 @@ class CategoryController {
         .toList();
   }
 
+  Future<int> getNoteCount(String categoryId) async {
+    await _ensureCategoryOwnership(categoryId);
+    final snapshot = await _categoriesRef
+        .doc(categoryId)
+        .collection('note')
+        .where('userId', isEqualTo: _auth.currentUser!.uid)
+        .get();
+    return snapshot.size;
+  }
+
+  // ── Fetch a single category owned by the current user ───────────────────────
+  Future<CategoryModel> getCategory(String docId) async {
+    await _requireCurrentUser();
+    await _ensureCategoryOwnership(docId);
+
+    final doc = await _categoriesRef.doc(docId).get();
+    return CategoryModel.fromMap(doc.id, doc.data()!);
+  }
+
   // ── Add a new category ─────────────────────────────────────────────────────
-  Future<void> addCategory(String name) async {
+  Future<void> addCategory(
+    String name, {
+    int iconCode = 0xe2c8,
+    int accentColor = 0xFFF59E0B,
+    String type = 'Personal',
+  }) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
       throw FirebaseAuthException(
@@ -81,11 +105,23 @@ class CategoryController {
       throw ArgumentError.value(name, 'name', 'Category name cannot be empty.');
     }
 
-    await _categoriesRef.add({'name': trimmedName, 'userId': uid});
+    await _categoriesRef.add({
+      'name': trimmedName,
+      'userId': uid,
+      'iconCode': iconCode,
+      'accentColor': accentColor,
+      'type': type,
+    });
   }
 
   // ── Update a category's name ───────────────────────────────────────────────
-  Future<void> updateCategory(String docId, String newName) async {
+  Future<void> updateCategory(
+    String docId,
+    String newName, {
+    int? iconCode,
+    int? accentColor,
+    String? type,
+  }) async {
     await _requireCurrentUser();
     await _ensureCategoryOwnership(docId);
 
@@ -95,10 +131,15 @@ class CategoryController {
           newName, 'newName', 'Category name cannot be empty.');
     }
 
-    await _categoriesRef.doc(docId).update({
+    final updates = <String, dynamic>{
       'name': trimmedName,
       'userId': _auth.currentUser!.uid,
-    });
+    };
+    if (iconCode != null) updates['iconCode'] = iconCode;
+    if (accentColor != null) updates['accentColor'] = accentColor;
+    if (type != null) updates['type'] = type;
+
+    await _categoriesRef.doc(docId).update(updates);
   }
 
   // ── Delete a category ──────────────────────────────────────────────────────

@@ -1,13 +1,21 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../models/category_model.dart';
 import '../../utils/app_error_messages.dart';
+import '../../utils/screen_cache.dart';
 import '../../utils/theme_mode_scope.dart';
 import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
+import '../settings/settings_view.dart';
+import '../widgets/app_bottom_nav.dart';
+import 'widgets/category_card.dart';
+import 'widgets/category_filters.dart';
+import 'widgets/delete_category_dialog.dart';
+import 'widgets/empty_categories.dart';
+import 'widgets/manage_category_sheet.dart';
+import 'widgets/success_dialog.dart';
 
 class HomeView extends StatefulWidget {
   final CategoryController? categoryController;
@@ -18,7 +26,6 @@ class HomeView extends StatefulWidget {
     this.categoryController,
     this.authController,
   });
-
   @override
   State<HomeView> createState() => _HomeViewState();
 }
@@ -30,10 +37,23 @@ class _HomeViewState extends State<HomeView> {
       widget.authController ?? AuthController();
 
   bool _isLoading = true;
-  bool _isSigningOut = false;
-  bool _isDeletingAccount = false;
+  int _segmentIndex = 0;
   final Set<String> _deletingCategoryIds = {};
   List<CategoryModel> _categories = [];
+  Map<String, int> _noteCounts = {};
+
+  List<CategoryModel> get _visibleCategories {
+    final selectedFilter = categoryFilterLabels[_segmentIndex];
+    if (selectedFilter == 'All') return _categories;
+
+    return _categories
+        .where(
+          (category) =>
+              category.type.trim().toLowerCase() ==
+              selectedFilter.toLowerCase(),
+        )
+        .toList();
+  }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -48,9 +68,18 @@ class _HomeViewState extends State<HomeView> {
 
     try {
       final categories = await _categoryController.getCategories();
+      final noteCounts = <String, int>{};
+      for (final category in categories) {
+        noteCounts[category.id] =
+            await _categoryController.getNoteCount(category.id);
+      }
       if (!mounted) return;
+      if (widget.categoryController == null) {
+        ScreenCache.write('home', (categories, noteCounts));
+      }
       setState(() {
         _categories = categories;
+        _noteCounts = noteCounts;
         _isLoading = false;
       });
     } catch (error) {
@@ -65,72 +94,26 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
-  Future<void> _signOut() async {
-    if (_isSigningOut) return;
-
-    setState(() => _isSigningOut = true);
-    try {
-      await _authController.signOut();
-      if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _isSigningOut = false);
-      _showSnackBar(
-        AppErrorMessages.fromException(
-          error,
-          fallback: 'Could not sign out. Please try again.',
-        ),
-      );
-    }
-  }
-
-  Future<void> _deleteAccount() async {
-    if (_isDeletingAccount || _isSigningOut) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete account?'),
-        content: const Text(
-          'This permanently deletes your profile, categories, and notes.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete account'),
-          ),
-        ],
+  Future<void> _openNotesTab() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const NoteListView(),
       ),
     );
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _isDeletingAccount = true);
-    try {
-      await _authController.deleteAccount();
-      if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _isDeletingAccount = false);
-      _showSnackBar(
-        AppErrorMessages.fromException(
-          error,
-          fallback: 'Could not delete your account. Please try again.',
-        ),
-      );
-    }
+    if (!mounted) return;
+    await _fetchCategories();
   }
 
   Future<void> _openAddCategory() async {
     final changed = await Navigator.of(context).pushNamed('addCategory');
     if (!mounted) return;
     if (changed == true) {
-      _showSnackBar('Category added.');
+      await showSuccessDialog(
+        context: context,
+        title: 'Category added',
+        message: 'Your new category is ready to hold notes.',
+      );
+      if (!mounted) return;
       await _fetchCategories();
     }
   }
@@ -141,25 +124,39 @@ class _HomeViewState extends State<HomeView> {
         builder: (context) => UpdateCategoryView(
           docId: category.id,
           oldName: category.name,
+          oldIconCode: category.iconCode,
+          oldAccentColor: category.accentColor,
+          oldType: category.type,
         ),
       ),
     );
     if (!mounted) return;
     if (changed == true) {
-      _showSnackBar('Category updated.');
+      await showSuccessDialog(
+        context: context,
+        title: 'Category updated',
+        message: 'Your changes have been saved.',
+      );
+      if (!mounted) return;
       await _fetchCategories();
     }
   }
 
-  Future<void> _deleteCategory(String id) async {
+  Future<void> _deleteCategory(CategoryModel category) async {
+    final id = category.id;
     if (_deletingCategoryIds.contains(id)) return;
 
     setState(() => _deletingCategoryIds.add(id));
     try {
       await _categoryController.deleteCategory(id);
       if (!mounted) return;
-      _showSnackBar('Category deleted.');
       await _fetchCategories();
+      if (!mounted) return;
+      await showSuccessDialog(
+        context: context,
+        title: 'Category deleted',
+        message: '"${category.name}" and its notes have been removed.',
+      );
     } catch (error) {
       if (!mounted) return;
       _showSnackBar(
@@ -175,120 +172,266 @@ class _HomeViewState extends State<HomeView> {
     }
   }
 
+  Future<void> _confirmDeleteCategory(CategoryModel category) async {
+    final confirmed = await showDeleteCategoryDialog(
+      context: context,
+      category: category,
+    );
+    if (confirmed == true) {
+      await _deleteCategory(category);
+    }
+  }
+
+  Future<void> _showManageCategorySheet(CategoryModel category) {
+    return showManageCategorySheet(
+      context: context,
+      category: category,
+      onEdit: () => _openEditCategory(category),
+      onDelete: () => _confirmDeleteCategory(category),
+    );
+  }
+
   @override
   void initState() {
+    if (widget.categoryController == null) {
+      final cached = ScreenCache.read<(List<CategoryModel>, Map<String, int>)>(
+        'home',
+      );
+      if (cached != null) {
+        _categories = cached.$1;
+        _noteCounts = cached.$2;
+        _isLoading = false;
+      }
+    }
     _fetchCategories();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final muted = isDark ? Colors.white60 : const Color(0xFF6B7280);
+    final isNarrow = MediaQuery.sizeOf(context).width < 400;
+    final visibleCategories = _visibleCategories;
+    final selectedFilter = categoryFilterLabels[_segmentIndex];
+    final sectionTitle = _segmentIndex == 0
+        ? 'ALL WORKSPACES'
+        : '${selectedFilter.toUpperCase()} CATEGORIES';
+
     return Scaffold(
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFFFFCF7),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: FloatingActionButton.extended(
-          backgroundColor: Colors.orange,
-          foregroundColor: Colors.white,
-          onPressed: _isLoading || _isSigningOut ? null : _openAddCategory,
-          icon: const Icon(Icons.add),
-          label: const Text('Add Categorie'),
+        padding: const EdgeInsets.only(bottom: 18),
+        child: SizedBox(
+          height: 54,
+          child: FloatingActionButton(
+            tooltip: 'Add category',
+            backgroundColor: const Color(0xFFF59E0B),
+            foregroundColor: Colors.white,
+            onPressed: _isLoading ? null : _openAddCategory,
+            child: const Icon(Icons.add_circle_outline, size: 28),
+          ),
         ),
       ),
       appBar: AppBar(
-        title: const Text('List of categories'),
-        actions: [
-          const ThemeModeToggle(),
-          IconButton(
-            tooltip: 'Delete account',
-            onPressed: _isDeletingAccount ? null : _deleteAccount,
-            icon: _isDeletingAccount
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.delete_forever),
-          ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: _isSigningOut || _isDeletingAccount ? null : _signOut,
-            icon: _isSigningOut
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.exit_to_app),
-          ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: isNarrow ? 12 : 20,
+        title: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.sticky_note_2_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'All Categories',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontSize: isNarrow ? 19 : 27,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: '${_categories.length} Active categories',
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isNarrow ? 9 : 13,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFFC66A00).withValues(alpha: 0.24)
+                      : const Color(0xFFFFF1D6),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  '${_categories.length} Active',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: isDark
+                        ? const Color(0xFFFFB74D)
+                        : const Color(0xFFC66A00),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: const [
+          ThemeModeToggle(),
+          SizedBox(width: 10),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : GridView.builder(
-              itemCount: _categories.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisExtent: 160,
-              ),
-              itemBuilder: (context, i) {
-                final category = _categories[i];
-                final isDeleting = _deletingCategoryIds.contains(category.id);
-                return InkWell(
-                  onTap: isDeleting
-                      ? null
-                      : () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  NoteListView(categoryId: category.id),
-                            ),
-                          );
-                        },
-                  onLongPress: isDeleting
-                      ? null
-                      : () {
-                          AwesomeDialog(
-                            context: context,
-                            dialogType: DialogType.info,
-                            animType: AnimType.rightSlide,
-                            title: 'Alert',
-                            desc: 'Select Your Choice ',
-                            btnOkText: 'Edit',
-                            btnOkOnPress: () => _openEditCategory(category),
-                            btnCancelText: 'Delete',
-                            btnCancelOnPress: () =>
-                                _deleteCategory(category.id),
-                          ).show();
-                        },
-                  child: Opacity(
-                    opacity: isDeleting ? 0.6 : 1,
-                    child: Card(
-                      child: Container(
-                        padding: const EdgeInsets.all(15),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (isDeleting)
-                              const SizedBox(
-                                height: 95,
-                                child:
-                                    Center(child: CircularProgressIndicator()),
-                              )
-                            else
-                              Image.asset(
-                                'assets/img/notes_752326.png',
-                                height: 95,
+      body: SafeArea(
+        top: false,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CategoryFilters(
+                            isDark: isDark,
+                            selectedIndex: _segmentIndex,
+                            onChanged: (index) =>
+                                setState(() => _segmentIndex = index),
+                          ),
+                          const SizedBox(height: 30),
+                          Row(
+                            children: [
+                              Text(
+                                sectionTitle,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: isDark
+                                      ? Colors.white70
+                                      : const Color(0xFF8EA1BC),
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                ),
                               ),
-                            Text(category.name),
-                          ],
-                        ),
+                              const Spacer(),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                  if (_categories.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyCategories(),
+                    )
+                  else if (visibleCategories.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyCategories(
+                        title: 'No $selectedFilter categories',
+                        message:
+                            'Try another filter or add a ${selectedFilter.toLowerCase()} category.',
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) => CategoryCard(
+                            category: visibleCategories[i],
+                            noteCount:
+                                _noteCounts[visibleCategories[i].id] ?? 0,
+                            isDeleting: _deletingCategoryIds.contains(
+                              visibleCategories[i].id,
+                            ),
+                            muted: muted,
+                            onOpen: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => NoteListView(
+                                  categoryId: visibleCategories[i].id,
+                                ),
+                              ),
+                            ),
+                            onManage: () => _showManageCategorySheet(
+                              visibleCategories[i],
+                            ),
+                          ),
+                          childCount: visibleCategories.length,
+                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 260,
+                          childAspectRatio: 0.86,
+                          crossAxisSpacing: 30,
+                          mainAxisSpacing: 14,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        isDark: isDark,
+        selectedTab: AppNavTab.categories,
+        onTabSelected: (tab) {
+          switch (tab) {
+            case AppNavTab.categories:
+              break;
+            case AppNavTab.notes:
+              _openNotesTab();
+              break;
+            case AppNavTab.settings:
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => SettingsView(
+                    authController: _authController,
+                    onTabSelected: (settingsContext, selectedTab) {
+                      switch (selectedTab) {
+                        case AppNavTab.categories:
+                          Navigator.of(settingsContext).pushNamedAndRemoveUntil(
+                            'homepage',
+                            (route) => false,
+                          );
+                          break;
+                        case AppNavTab.notes:
+                          Navigator.of(settingsContext).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const NoteListView(),
+                            ),
+                          );
+                          break;
+                        case AppNavTab.settings:
+                          break;
+                      }
+                    },
+                  ),
+                ),
+              );
+              break;
+          }
+        },
+      ),
     );
   }
 }

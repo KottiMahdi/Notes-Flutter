@@ -45,24 +45,36 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 
   InputDecoration _inputDecoration(BuildContext context, String hint) {
+    final colors = Theme.of(context).colorScheme;
     return InputDecoration(
       hintText: hint,
+      prefixIcon: Icon(_iconForHint(hint), size: 20),
       hintStyle: TextStyle(
         fontSize: 14,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        color: colors.onSurfaceVariant,
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 2, horizontal: 20),
+      contentPadding: const EdgeInsets.symmetric(vertical: 16),
       filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      fillColor: colors.surfaceContainerLowest,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(50),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colors.outlineVariant),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(50),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colors.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colors.primary, width: 2),
       ),
     );
+  }
+
+  IconData _iconForHint(String hint) {
+    if (hint.contains('Username')) return Icons.person_outline;
+    if (hint.contains('Email')) return Icons.mail_outline;
+    return Icons.lock_outline;
   }
 
   Future<void> _register() async {
@@ -119,7 +131,7 @@ class _RegisterFormState extends State<RegisterForm> {
         children: [
           const Text(
             'Username',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 10),
           TextFormField(
@@ -138,7 +150,7 @@ class _RegisterFormState extends State<RegisterForm> {
           const SizedBox(height: 20),
           const Text(
             'Email',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 10),
           TextFormField(
@@ -159,7 +171,7 @@ class _RegisterFormState extends State<RegisterForm> {
           const SizedBox(height: 20),
           const Text(
             'Password',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 10),
           TextFormField(
@@ -178,17 +190,16 @@ class _RegisterFormState extends State<RegisterForm> {
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             decoration:
                 _inputDecoration(context, 'Enter Your Password').copyWith(
-              suffixIcon: TextButton(
+              suffixIcon: IconButton(
                 onPressed: _isLoading
                     ? null
                     : () => setState(() => _isObscured = !_isObscured),
-                child: Text(
-                  _isObscured ? 'SHOW' : 'HIDE',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                tooltip: _isObscured ? 'Show password' : 'Hide password',
+                icon: Icon(
+                  _isObscured
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
                 ),
               ),
             ),
@@ -196,7 +207,7 @@ class _RegisterFormState extends State<RegisterForm> {
           const SizedBox(height: 20),
           const Text(
             'Confirm Password',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 10),
           TextFormField(
@@ -218,17 +229,16 @@ class _RegisterFormState extends State<RegisterForm> {
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             decoration:
                 _inputDecoration(context, 'Confirm Your Password').copyWith(
-              suffixIcon: TextButton(
+              suffixIcon: IconButton(
                 onPressed: _isLoading
                     ? null
                     : () => setState(() => _isObscured = !_isObscured),
-                child: Text(
-                  _isObscured ? 'SHOW' : 'HIDE',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                tooltip: _isObscured ? 'Show password' : 'Hide password',
+                icon: Icon(
+                  _isObscured
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
                 ),
               ),
             ),
@@ -239,25 +249,36 @@ class _RegisterFormState extends State<RegisterForm> {
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    backgroundColor: Colors.orangeAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   onPressed: _isLoading ? null : _register,
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'Sign Up',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                 ),
               ),

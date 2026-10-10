@@ -56,107 +56,132 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     final authController = widget.authController ??
         AuthController(googleSignIn: widget.googleSignIn);
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(actions: const [ThemeModeToggle()]),
-      body: SingleChildScrollView(
-        reverse: true,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const CustomLogo(),
-              const SizedBox(height: 20),
-              const Text(
-                'Login',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                ),
+      backgroundColor: colors.surface,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 40,
+                maxWidth: 520,
               ),
-              const SizedBox(height: 10),
-              Text(
-                'Login To Continue Using The App',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 20),
-              LoginForm(authController: authController),
-              const SizedBox(height: 20),
-              Center(
-                child: Text(
-                  'OR',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Align(
+                    alignment: Alignment.topRight,
+                    child: ThemeModeToggle(),
                   ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              MaterialButton(
-                height: 45,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                disabledColor: Theme.of(context).colorScheme.surfaceContainer,
-                textColor: Theme.of(context).colorScheme.onSurface,
-                onPressed:
-                    _isGoogleLoading ? null : () => _signInWithGoogle(context),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_isGoogleLoading) ...[
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text('Signing in...'),
-                    ] else ...[
-                      Image.asset(
-                        'assets/img/google-color-svgrepo-com.png',
-                        width: 26,
-                      ),
-                      const Text(' Login with Google'),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              InkWell(
-                onTap: _isGoogleLoading
-                    ? null
-                    : () {
-                        Navigator.of(context).pushReplacementNamed('registre');
-                      },
-                child: const Center(
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: "Don't Have An Account ? "),
-                        TextSpan(
-                          text: 'Register',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  const SizedBox(height: 24),
+                  const CustomLogo(),
+                  const SizedBox(height: 26),
+                  Text(
+                    'Login',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface,
                         ),
-                      ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Login To Continue Using The App',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 30),
+                  LoginForm(authController: authController),
+                  const SizedBox(height: 26),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: colors.outlineVariant)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'OR',
+                          style:
+                              Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.2,
+                                  ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: colors.outlineVariant)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 54,
+                    child: MaterialButton(
+                      height: 54,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      color: colors.surfaceContainerLowest,
+                      disabledColor: colors.surfaceContainer,
+                      textColor: colors.onSurface,
+                      padding: EdgeInsets.zero,
+                      onPressed: _isGoogleLoading
+                          ? null
+                          : () => _signInWithGoogle(context),
+                      child: _isGoogleLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/img/google-color-svgrepo-com.png',
+                                  width: 22,
+                                  height: 22,
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('Login with Google'),
+                              ],
+                            ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 26),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: _isGoogleLoading
+                        ? null
+                        : () => Navigator.of(context)
+                            .pushReplacementNamed('registre'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text.rich(
+                        TextSpan(
+                          text: "Don't have an account? ",
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                          children: [
+                            TextSpan(
+                              text: 'Register',
+                              style: TextStyle(
+                                color: colors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

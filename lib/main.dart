@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart'
+    show FlutterQuillLocalizations;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
@@ -11,6 +13,9 @@ import 'views/auth/login_view.dart';
 import 'views/auth/register_view.dart';
 import 'views/categories/add_category_view.dart';
 import 'views/home/home_view.dart';
+import 'views/notes/note_list_view.dart';
+import 'views/settings/settings_view.dart';
+import 'views/widgets/app_bottom_nav.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +76,10 @@ class _MyAppState extends State<MyApp> {
         child: MaterialApp(
           title: 'Notes App',
           themeMode: mode,
+          localizationsDelegates: const [
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: FlutterQuillLocalizations.supportedLocales,
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
             scaffoldBackgroundColor: Colors.white,
@@ -107,6 +116,27 @@ class _MyAppState extends State<MyApp> {
           ),
           routes: {
             'homepage': (context) => const HomeView(),
+            'settings': (context) => SettingsView(
+                  onTabSelected: (settingsContext, selectedTab) {
+                    switch (selectedTab) {
+                      case AppNavTab.categories:
+                        Navigator.of(settingsContext).pushNamedAndRemoveUntil(
+                          'homepage',
+                          (route) => false,
+                        );
+                        break;
+                      case AppNavTab.notes:
+                        Navigator.of(settingsContext).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => const NoteListView(),
+                          ),
+                        );
+                        break;
+                      case AppNavTab.settings:
+                        break;
+                    }
+                  },
+                ),
             'addCategory': (context) => const AddCategoryView(),
             'registre': (context) => const RegisterView(),
             'login': (context) => const LoginView(),

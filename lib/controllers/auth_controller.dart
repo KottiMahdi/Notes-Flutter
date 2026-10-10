@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/user_model.dart';
 import '../utils/app_error_messages.dart';
+import '../utils/screen_cache.dart';
 
 class AuthController {
   final FirebaseAuth _auth;
@@ -129,11 +130,13 @@ class AuthController {
   }
 
   Future<void> signOut() async {
+    ScreenCache.clear();
     await _signOutGoogleSession();
     await _auth.signOut();
   }
 
   Future<void> deleteAccount() async {
+    ScreenCache.clear();
     final user = _auth.currentUser;
     if (user == null) {
       throw FirebaseAuthException(
