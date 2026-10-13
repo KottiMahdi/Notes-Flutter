@@ -1,0 +1,399 @@
+You are redesigning an existing Flutter/Firebase mobile application called “Notes”.
+
+Use the existing Stitch project:
+Notes Mobile App UI Design
+Project ID: 8847171875889744593
+
+Do not change the product’s core functionality. Redesign the user interface and visual experience while preserving the existing information architecture, workflows, authentication rules, and data behavior.
+
+## Product Purpose
+
+Notes is a private personal notes-management application. Authenticated users organize their notes inside custom categories. Each user can only access their own profile, categories, and notes.
+
+The application is built with Flutter and uses Firebase Authentication and Cloud Firestore.
+
+## Existing Technology Context
+
+- Flutter and Dart mobile application
+- Firebase Core
+- Firebase Authentication
+- Cloud Firestore
+- Google Sign-In
+- SharedPreferences for persistent theme mode
+- Material Design components
+- Android and iOS support
+- Orange is the current brand accent
+- The application supports light and dark themes
+
+## Authentication Features
+
+The app must include:
+
+1. Email/password login
+   - Email field
+   - Password field
+   - Password visibility toggle
+   - Login button
+   - Email format validation
+   - Required-field validation
+   - Loading state
+   - Authentication error state
+
+2. User registration
+   - Username field
+   - Email field
+   - Password field
+   - Confirm password field
+   - Password visibility controls
+   - Username validation
+   - Email validation
+   - Password minimum length validation
+   - Confirm-password matching validation
+   - Account creation
+   - User profile creation
+   - Email verification message
+
+3. Google Sign-In
+   - Dedicated Google authentication button
+   - Google logo
+   - Loading state
+   - Cancelled-login state
+   - Authentication error state
+
+4. Email verification
+   - Email verification is required before entering the application
+   - Unverified users must be signed out
+   - Clearly communicate that the user must verify their email
+
+5. Forgot password
+   - Email input
+   - Reset-password action
+   - Success confirmation after the email is sent
+   - Error state
+
+6. Session restoration
+   - Restore the Firebase session when the app starts
+   - Show a startup loading screen
+   - Show a session-checking loading screen
+   - Show a retryable Firebase initialization error screen
+
+## Main Category Screen
+
+After authentication, users arrive at the category home screen.
+
+Required UI:
+
+- App bar title: “List of categories”
+- Theme toggle
+- Delete-account action
+- Sign-out action
+- Responsive two-column category grid
+- Category cards with:
+  - Category name
+  - Notes/notebook visual
+  - Clear tap target
+  - Edit and delete actions
+- Floating action button labeled “Add Category”
+- Loading state while categories are fetched
+- Empty state when no categories exist
+- Error state when categories cannot be loaded
+- Snackbar feedback after successful actions
+
+Interactions:
+
+- Tap a category to open its notes
+- Long-press a category to show Edit and Delete actions
+- Edit category name
+- Delete category with confirmation
+- Refresh the category list after changes
+- Disable controls during active operations
+
+## Category Creation Screen
+
+Required UI:
+
+- App bar title: “Add Category”
+- Category-name input
+- Placeholder: “Enter name”
+- Required validation
+- Primary “Add” button
+- Loading state
+- Success and error feedback
+
+## Category Editing Screen
+
+Required UI:
+
+- App bar title: “Edit Category”
+- Pre-filled category-name input
+- Primary “Save” button
+- Required validation
+- Loading state
+- Success and error feedback
+
+## Notes Screen
+
+When a user opens a category, show its notes.
+
+Required UI:
+
+- App bar title: “Notes”
+- Sign-out action
+- Vertical list of note cards or rows
+- Note text preview
+- Floating action button labeled “Add Note”
+- Loading state
+- Empty state when the category has no notes
+- Error state when notes cannot be loaded
+- Snackbar feedback after actions
+
+Interactions:
+
+- Tap a note to edit it
+- Long-press a note to delete it
+- Delete a note with confirmation
+- Return to the category screen using back navigation
+- Disable controls while an operation is active
+
+## Add Note Screen
+
+Required UI:
+
+- App bar title: “Add Note”
+- Large multiline note input
+- Placeholder: “Enter your note”
+- Required validation
+- Primary “Add” button
+- Keyboard-friendly layout
+- Loading state
+- Error feedback
+
+## Edit Note Screen
+
+Required UI:
+
+- App bar title: “Edit Note”
+- Multiline input pre-filled with the existing note
+- Primary “Save” button
+- Required validation
+- Loading state
+- Success and error feedback
+
+## Delete Account
+
+The home screen must provide a delete-account action.
+
+Required behavior and UI:
+
+- Destructive delete-account icon
+- Confirmation dialog
+- Title: “Delete account?”
+- Explain that deletion permanently removes:
+  - Firebase Authentication account
+  - User profile
+  - Owned categories
+  - Nested notes
+- Cancel action
+- Destructive confirmation action
+- Loading state during deletion
+- Return to the login screen after successful deletion
+- Display an error message if deletion fails
+
+## Data and Security Rules
+
+Preserve the following data behavior:
+
+- Every user has a private profile.
+- Profiles are stored in Firebase under the authenticated user ID.
+- Categories belong to one authenticated user.
+- Notes belong to a category and its authenticated owner.
+- Users must only see their own categories.
+- Users must only see their own notes.
+- Users must not read, update, or delete another user’s data.
+- Category names and note text must not be empty.
+- Trim whitespace before saving text.
+- Never expose another user’s private data in the UI.
+
+## Visual Redesign Direction
+
+Create a distinctive, polished productivity interface rather than a generic CRUD dashboard.
+
+Desired qualities:
+
+- Calm, focused, warm, and organized
+- Modern mobile productivity app
+- Strong visual hierarchy
+- Friendly but professional
+- Easy to scan
+- Comfortable for frequent note-taking
+- Clear distinction between primary and destructive actions
+- Minimal visual clutter
+- Consistent component language across all screens
+
+Use a refined orange-led visual identity:
+
+- Primary orange: #F59E0B
+- Deep orange: #C66A00
+- Dark charcoal: #17202A
+- Light background: #FFFCF7
+- Light surface: #FFFFFF
+- Dark background: #121212
+- Dark surface: #1E1E1E
+- Primary text: #1F2933
+- Secondary text: #6B7280
+- Border: #E5E7EB
+- Error: #D92D20
+- Success: #2E8B57
+
+Use a contemporary readable sans-serif font. Headings should feel confident but compact. Body text must remain highly legible on small screens.
+
+## Component Guidelines
+
+Create a reusable design system for:
+
+- App bars
+- Authentication forms
+- Text fields
+- Primary buttons
+- Secondary buttons
+- Destructive buttons
+- Floating action buttons
+- Category cards
+- Note cards
+- Empty states
+- Loading indicators
+- Skeleton states
+- Confirmation dialogs
+- Error dialogs
+- Snackbars
+- Icon buttons
+- Theme switch controls
+
+Use icons for actions such as:
+
+- Add
+- Edit
+- Delete
+- Sign out
+- Theme switching
+- Email
+- Password visibility
+- Notes
+- Categories
+- Back navigation
+- Retry
+
+Do not use text inside rounded rectangular controls when a familiar icon is sufficient. Every unfamiliar icon should have a tooltip or accessible label.
+
+## Light and Dark Themes
+
+Design every screen in both themes.
+
+Light theme:
+
+- Warm off-white page background
+- White elevated surfaces
+- Charcoal text
+- Orange primary actions
+- Soft neutral borders and shadows
+
+Dark theme:
+
+- Near-black background
+- Dark gray surfaces
+- High-contrast white text
+- Orange highlights and actions
+- Avoid pure black cards and low-contrast gray text
+
+The theme toggle must be visible on authentication screens and the category home screen. The selected theme is persisted locally.
+
+## Required States
+
+Design all important states, not only the default success state:
+
+- First launch
+- Firebase initialization loading
+- Firebase initialization failure with retry
+- Session restoration loading
+- Login loading
+- Registration loading
+- Google Sign-In loading
+- Empty category list
+- Category loading
+- Category load failure
+- Empty notes list
+- Notes loading
+- Notes load failure
+- Add/edit form validation errors
+- Delete confirmation dialogs
+- Delete operation loading
+- Sign-out loading
+- Account deletion loading
+- Authentication error
+- Successful action feedback
+
+## Responsive Requirements
+
+- Mobile-first design
+- Support small and large phone screens
+- Keep buttons and text inside their containers
+- Prevent keyboard overlap on forms
+- Use safe areas
+- Maintain stable card and grid dimensions
+- Use responsive spacing and typography
+- Ensure every tap target is accessible
+- Avoid horizontal scrolling
+- Maintain readable note text at every screen size
+
+## Navigation Flow
+
+Unauthenticated flow:
+
+Login
+→ Register
+→ Email verification message
+→ Login
+→ Forgot password
+
+Authenticated flow:
+
+Home categories
+→ Add category
+→ Edit category
+→ Notes list
+→ Add note
+→ Edit note
+
+Global actions:
+
+Home categories
+→ Sign out
+→ Login
+
+Home categories
+→ Delete account confirmation
+→ Login
+
+## Important Product Boundaries
+
+Do not add features that do not exist in the current product:
+
+- No search
+- No tags
+- No reminders
+- No pinning
+- No note sharing
+- No collaboration
+- No attachments
+- No file uploads
+- No push notifications
+- No analytics
+- No advertisements
+- No location
+- No camera
+- No microphone
+- No calendar integration
+- No public profiles
+- No social feed
+
+Redesign the UI, layout, typography, components, and visual identity while preserving the complete existing functionality described above. Generate a cohesive set of screens that looks like one intentionally designed mobile application.

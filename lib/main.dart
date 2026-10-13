@@ -3,11 +3,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart'
     show FlutterQuillLocalizations;
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'controllers/auth_controller.dart';
 import 'firebase_options.dart';
-import 'utils/app_error_messages.dart';
-import 'utils/theme_mode_scope.dart';
+import 'core/utils/app_error_messages.dart';
+import 'core/widgets/theme_mode_scope.dart';
+import 'services/theme_preferences_service.dart';
 import 'views/auth/forgot_password_view.dart';
 import 'views/auth/login_view.dart';
 import 'views/auth/register_view.dart';
@@ -25,11 +26,13 @@ void main() {
 class MyApp extends StatefulWidget {
   final Future<FirebaseApp> Function()? firebaseInitializer;
   final FirebaseAuth? auth;
+  final ThemePreferencesService? themePreferencesService;
 
   const MyApp({
     super.key,
     this.firebaseInitializer,
     this.auth,
+    this.themePreferencesService,
   });
 
   @override
@@ -37,6 +40,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  late final ThemePreferencesService _themePreferencesService =
+      widget.themePreferencesService ?? ThemePreferencesService();
   final ValueNotifier<ThemeMode> _themeMode =
       ValueNotifier<ThemeMode>(ThemeMode.light);
 
@@ -48,16 +53,13 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _restoreThemeMode() async {
-    final preferences = await SharedPreferences.getInstance();
+    final mode = await _themePreferencesService.loadThemeMode();
     if (!mounted) return;
-    _themeMode.value = preferences.getBool('dark_mode') == true
-        ? ThemeMode.dark
-        : ThemeMode.light;
+    _themeMode.value = mode;
   }
 
   Future<void> _persistThemeMode() async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setBool('dark_mode', _themeMode.value == ThemeMode.dark);
+    await _themePreferencesService.saveThemeMode(_themeMode.value);
   }
 
   @override
@@ -162,12 +164,12 @@ class _AppBootstrap extends StatefulWidget {
 }
 
 class _AppBootstrapState extends State<_AppBootstrap> {
-  late Future<FirebaseApp> _initialization;
+  late Future<FirebaseApp> _firebaseInitialization;
 
   @override
   void initState() {
     super.initState();
-    _initialization = _initializeFirebase();
+    _firebaseInitialization = _initializeFirebase();
   }
 
   Future<FirebaseApp> _initializeFirebase() {
@@ -183,14 +185,14 @@ class _AppBootstrapState extends State<_AppBootstrap> {
 
   void _retry() {
     setState(() {
-      _initialization = _initializeFirebase();
+      _firebaseInitialization = _initializeFirebase();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<FirebaseApp>(
-      future: _initialization,
+      future: _firebaseInitialization,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const _LoadingScaffold(message: 'Starting app...');
@@ -208,21 +210,23 @@ class _AppBootstrapState extends State<_AppBootstrap> {
           );
         }
 
-        return _AuthGate(auth: widget.auth ?? FirebaseAuth.instance);
+        return _AuthGate(
+          authController: AuthController(auth: widget.auth),
+        );
       },
     );
   }
 }
 
 class _AuthGate extends StatelessWidget {
-  final FirebaseAuth auth;
+  final AuthController authController;
 
-  const _AuthGate({required this.auth});
+  const _AuthGate({required this.authController});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: auth.authStateChanges(),
+      stream: authController.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const _LoadingScaffold(message: 'Checking session...');
@@ -243,18 +247,18 @@ class _AuthGate extends StatelessWidget {
           return const LoginView();
         }
 
-        return _VerifiedSession(auth: auth, user: user);
+        return _VerifiedSession(authController: authController, user: user);
       },
     );
   }
 }
 
 class _VerifiedSession extends StatefulWidget {
-  final FirebaseAuth auth;
+  final AuthController authController;
   final User user;
 
   const _VerifiedSession({
-    required this.auth,
+    required this.authController,
     required this.user,
   });
 
@@ -263,47 +267,36 @@ class _VerifiedSession extends StatefulWidget {
 }
 
 class _VerifiedSessionState extends State<_VerifiedSession> {
-  late Future<bool> _sessionCheck;
+  late Future<bool> _verifiedSessionCheck;
 
   @override
   void initState() {
     super.initState();
-    _sessionCheck = _checkSession();
+    _verifiedSessionCheck = _checkSession();
   }
 
   @override
   void didUpdateWidget(covariant _VerifiedSession oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.user.uid != widget.user.uid) {
-      _sessionCheck = _checkSession();
+      _verifiedSessionCheck = _checkSession();
     }
   }
 
   Future<bool> _checkSession() async {
-    await widget.user.reload();
-    final currentUser = widget.auth.currentUser;
-    if (currentUser == null) {
-      return false;
-    }
-
-    if (!currentUser.emailVerified) {
-      await widget.auth.signOut();
-      return false;
-    }
-
-    return true;
+    return widget.authController.restoreVerifiedSession(widget.user);
   }
 
   void _retry() {
     setState(() {
-      _sessionCheck = _checkSession();
+      _verifiedSessionCheck = _checkSession();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: _sessionCheck,
+      future: _verifiedSessionCheck,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const _LoadingScaffold(message: 'Restoring session...');

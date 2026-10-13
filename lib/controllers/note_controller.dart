@@ -1,53 +1,33 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import '../models/category_model.dart';
+import '../models/categorized_note_model.dart';
 import '../models/note_model.dart';
+import '../services/auth_service.dart';
+import '../services/category_service.dart';
+import '../services/note_service.dart';
 
 class NoteController {
-  final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final AuthService _authService;
+  final NoteService _noteService;
+  final CategoryService _categoryService;
 
   NoteController({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
-
-  String? _ownerUid(Map<String, dynamic>? data) {
-    if (data == null) return null;
-    final value = data['userId'] ?? data['uid'] ?? data['id'];
-    return value is String ? value : null;
-  }
-
-  DocumentReference<Map<String, dynamic>> _categoryDoc(String categoryId) {
-    return _firestore.collection('categories').doc(categoryId);
-  }
-
-  CollectionReference<Map<String, dynamic>> _noteCollection(String categoryId) {
-    return _categoryDoc(categoryId).collection('note');
-  }
-
-  Future<void> _requireCurrentUser() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
-  }
+    AuthService? authService,
+    NoteService? noteService,
+    CategoryService? categoryService,
+  })  : _authService = authService ?? AuthService(auth: auth),
+        _noteService = noteService ?? NoteService(firestore: firestore),
+        _categoryService =
+            categoryService ?? CategoryService(firestore: firestore);
 
   Future<void> _ensureCategoryOwnership(String categoryId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
+    final uid = _authService.requireCurrentUser().uid;
 
-    final categoryDoc = await _categoryDoc(categoryId).get();
-    if (!categoryDoc.exists || _ownerUid(categoryDoc.data()) != uid) {
+    final ownerUid = await _noteService.getCategoryOwnerId(categoryId);
+    if (ownerUid != uid) {
       throw FirebaseException(
         plugin: 'firestore',
         message: 'You are not authorized to access this category.',
@@ -56,18 +36,12 @@ class NoteController {
   }
 
   Future<void> _ensureNoteOwnership(String categoryId, String noteId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
+    final uid = _authService.requireCurrentUser().uid;
 
     await _ensureCategoryOwnership(categoryId);
 
-    final noteDoc = await _noteCollection(categoryId).doc(noteId).get();
-    if (!noteDoc.exists || _ownerUid(noteDoc.data()) != uid) {
+    final ownerUid = await _noteService.getNoteOwnerId(categoryId, noteId);
+    if (ownerUid != uid) {
       throw FirebaseException(
         plugin: 'firestore',
         message: 'You are not authorized to access this note.',
@@ -77,15 +51,10 @@ class NoteController {
 
   // ── Fetch notes for a category ─────────────────────────────────────────────
   Future<List<NoteModel>> getNotes(String categoryId) async {
-    await _requireCurrentUser();
+    final uid = _authService.requireCurrentUser().uid;
     await _ensureCategoryOwnership(categoryId);
 
-    final snapshot = await _noteCollection(categoryId)
-        .where('userId', isEqualTo: _auth.currentUser!.uid)
-        .get();
-    final notes = snapshot.docs
-        .map((doc) => NoteModel.fromMap(doc.id, doc.data()))
-        .toList();
+    final notes = await _noteService.getNotes(categoryId, uid);
     notes.sort((a, b) {
       final aCreatedAt = a.createdAt;
       final bCreatedAt = b.createdAt;
@@ -97,13 +66,46 @@ class NoteController {
     return notes;
   }
 
+  Future<
+      ({
+        List<CategoryModel> categories,
+        List<CategorizedNoteModel> entries,
+      })> getAllNotes() async {
+    final uid = _authService.requireCurrentUser().uid;
+    final categories = await _categoryService.getCategories(uid);
+    final entries = <CategorizedNoteModel>[];
+
+    for (final category in categories) {
+      final notes = await getNotes(category.id);
+      entries.addAll(
+        notes.map(
+          (note) => CategorizedNoteModel(
+            note: note,
+            categoryId: category.id,
+            categoryName: category.name,
+          ),
+        ),
+      );
+    }
+    entries.sort((a, b) {
+      final aCreatedAt = a.note.createdAt;
+      final bCreatedAt = b.note.createdAt;
+      if (aCreatedAt == null && bCreatedAt == null) return 0;
+      if (aCreatedAt == null) return 1;
+      if (bCreatedAt == null) return -1;
+      return bCreatedAt.compareTo(aCreatedAt);
+    });
+
+    return (categories: categories, entries: entries);
+  }
+
   // ── Add a note ────────────────────────────────────────────────────────────
   Future<void> addNote(
     String categoryId,
     String noteText, {
     String title = '',
   }) async {
-    await _requireCurrentUser();
+    final uid = _authService.requireCurrentUser().uid;
     await _ensureCategoryOwnership(categoryId);
 
     final trimmed = noteText.trim();
@@ -112,12 +114,12 @@ class NoteController {
           noteText, 'noteText', 'Note text cannot be empty.');
     }
 
-    await _noteCollection(categoryId).add({
-      'note': trimmed,
-      'title': title.trim(),
-      'userId': _auth.currentUser!.uid,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await _noteService.addNote(
+      categoryId: categoryId,
+      note: trimmed,
+      title: title.trim(),
+      uid: uid,
+    );
   }
 
   // ── Update a note ─────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ class NoteController {
     String newText, {
     String title = '',
   }) async {
-    await _requireCurrentUser();
+    final uid = _authService.requireCurrentUser().uid;
     await _ensureNoteOwnership(categoryId, noteId);
 
     final trimmed = newText.trim();
@@ -136,18 +138,20 @@ class NoteController {
           newText, 'newText', 'Note text cannot be empty.');
     }
 
-    await _noteCollection(categoryId).doc(noteId).update({
-      'note': trimmed,
-      'title': title.trim(),
-      'userId': _auth.currentUser!.uid,
-    });
+    await _noteService.editNote(
+      categoryId: categoryId,
+      noteId: noteId,
+      note: trimmed,
+      title: title.trim(),
+      uid: uid,
+    );
   }
 
   // ── Delete a note ─────────────────────────────────────────────────────────
   Future<void> deleteNote(String categoryId, String noteId) async {
-    await _requireCurrentUser();
+    _authService.requireCurrentUser();
     await _ensureNoteOwnership(categoryId, noteId);
 
-    await _noteCollection(categoryId).doc(noteId).delete();
+    await _noteService.deleteNote(categoryId, noteId);
   }
 }

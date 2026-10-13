@@ -3,7 +3,7 @@ class UserModel {
   final String email;
   final String? uid;
 
-  UserModel({
+  const UserModel({
     required this.username,
     required this.email,
     this.uid,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:notes_management_mobile_application/utils/note_content_codec.dart';
+import 'package:notes_management_mobile_application/core/utils/note_content_codec.dart';
 
 void main() {
   group('NoteContentCodec', () {

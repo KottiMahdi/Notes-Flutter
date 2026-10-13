@@ -1,9 +1,8 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
-
 import '../../controllers/auth_controller.dart';
-import '../../utils/app_error_messages.dart';
-import '../../utils/theme_mode_scope.dart';
+import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/theme_mode_scope.dart';
 
 class ForgotPasswordView extends StatefulWidget {
   final AuthController? authController;
@@ -23,8 +22,8 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
 
   @override
   void initState() {
-    _emailCtrl = TextEditingController();
     super.initState();
+    _emailCtrl = TextEditingController();
   }
 
   @override

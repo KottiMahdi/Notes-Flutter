@@ -4,25 +4,27 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/user_model.dart';
-import '../utils/app_error_messages.dart';
-import '../utils/screen_cache.dart';
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
+import '../core/utils/screen_cache.dart';
 
 class AuthController {
-  final FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn;
+  final AuthService _authService;
+  final UserService _userService;
 
   AuthController({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     GoogleSignIn? googleSignIn,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+    AuthService? authService,
+    UserService? userService,
+  })  : _authService =
+            authService ?? AuthService(auth: auth, googleSignIn: googleSignIn),
+        _userService = userService ?? UserService(firestore: firestore);
 
   Future<void> _signOutGoogleSession() async {
     try {
-      await _googleSignIn.signOut();
+      await _authService.signOutGoogle();
     } catch (_) {
       debugPrint('Google sign-out did not complete; continuing sign-out.');
     }
@@ -37,10 +39,10 @@ class AuthController {
       );
     }
 
-    await user.reload();
-    final refreshedUser = _auth.currentUser;
+    await _authService.reloadCurrentUser(user);
+    final refreshedUser = _authService.currentUser;
     if (refreshedUser == null || !refreshedUser.emailVerified) {
-      await _auth.signOut();
+      await _authService.signOut();
       await _signOutGoogleSession();
       throw FirebaseAuthException(
         code: 'email-not-verified',
@@ -49,11 +51,24 @@ class AuthController {
     }
   }
 
+  Future<bool> restoreVerifiedSession(User user) async {
+    await _authService.reloadCurrentUser(user);
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) return false;
+
+    if (!currentUser.emailVerified) {
+      await _authService.signOut();
+      return false;
+    }
+
+    return true;
+  }
+
   Future<UserCredential> signIn({
     required String email,
     required String password,
   }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
+    final credential = await _authService.signIn(
       email: email.trim(),
       password: password,
     );
@@ -66,14 +81,14 @@ class AuthController {
     required String email,
     required String password,
   }) async {
-    return _auth.createUserWithEmailAndPassword(
+    return _authService.signUp(
       email: email.trim(),
       password: password,
     );
   }
 
   Future<void> saveUserDetails(UserModel user) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authService.currentUser?.uid;
     if (uid == null) {
       throw FirebaseAuthException(
         code: 'no-current-user',
@@ -81,18 +96,11 @@ class AuthController {
       );
     }
 
-    await _firestore.collection('Users').doc(uid).set(
-      {
-        ...user.toMap(),
-        'uid': uid,
-        'createdAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    await _userService.saveUserDetails(uid, user);
   }
 
   Future<void> sendEmailVerification() async {
-    final user = _auth.currentUser;
+    final user = _authService.currentUser;
     if (user == null) {
       throw FirebaseAuthException(
         code: 'no-current-user',
@@ -100,22 +108,11 @@ class AuthController {
       );
     }
 
-    await user.sendEmailVerification();
+    await _authService.sendEmailVerification(user);
   }
 
   Future<UserCredential> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
-      throw const AuthActionCancelledException();
-    }
-
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final userCredential = await _auth.signInWithCredential(credential);
+    final userCredential = await _authService.signInWithGoogle();
     await _ensureEmailIsVerified(userCredential);
     return userCredential;
   }
@@ -126,18 +123,18 @@ class AuthController {
       throw ArgumentError.value(email, 'email', 'Enter your email address.');
     }
 
-    await _auth.sendPasswordResetEmail(email: trimmedEmail);
+    await _authService.sendPasswordReset(trimmedEmail);
   }
 
   Future<void> signOut() async {
     ScreenCache.clear();
     await _signOutGoogleSession();
-    await _auth.signOut();
+    await _authService.signOut();
   }
 
   Future<void> deleteAccount() async {
     ScreenCache.clear();
-    final user = _auth.currentUser;
+    final user = _authService.currentUser;
     if (user == null) {
       throw FirebaseAuthException(
         code: 'no-current-user',
@@ -145,28 +142,13 @@ class AuthController {
       );
     }
 
-    final categories = await _firestore
-        .collection('categories')
-        .where('userId', isEqualTo: user.uid)
-        .get();
-    final batch = _firestore.batch();
-
-    for (final category in categories.docs) {
-      final notes = await category.reference.collection('note').get();
-      for (final note in notes.docs) {
-        batch.delete(note.reference);
-      }
-      batch.delete(category.reference);
-    }
-
-    batch.delete(_firestore.collection('Users').doc(user.uid));
-    await batch.commit();
-    await user.delete();
-    await _auth.signOut();
+    await _userService.deleteUserData(user.uid);
+    await _authService.deleteCurrentUser(user);
+    await _authService.signOut();
     await _signOutGoogleSession();
   }
 
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => _authService.currentUser;
 
-  Stream<User?> authStateChanges() => _auth.authStateChanges();
+  Stream<User?> authStateChanges() => _authService.authStateChanges();
 }

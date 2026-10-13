@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../../controllers/auth_controller.dart';
-import '../../utils/theme_mode_scope.dart';
+import '../../core/widgets/theme_mode_scope.dart';
 import 'register_form.dart';
 
 class RegisterView extends StatelessWidget {

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
 import '../../controllers/auth_controller.dart';
-import '../../utils/app_error_messages.dart';
-import '../../utils/theme_mode_scope.dart';
+import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/theme_mode_scope.dart';
 import '../widgets/custom_logo.dart';
 import 'login_form.dart';
 

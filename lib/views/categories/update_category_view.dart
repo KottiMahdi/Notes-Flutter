@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/category_controller.dart';
-import '../../utils/app_error_messages.dart';
-import '../../utils/theme_mode_scope.dart';
-import 'add_category_view.dart';
+import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/theme_mode_scope.dart';
+import 'widgets/category_selection_controls.dart';
 
 class UpdateCategoryView extends StatefulWidget {
   final String docId;
@@ -36,36 +36,7 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
   late IconData _selectedIcon =
       IconData(widget.oldIconCode, fontFamily: 'MaterialIcons');
   late Color _selectedAccent = Color(widget.oldAccentColor);
-  late String _selectedType = _types.first;
-
-  static const _types = ['Work', 'Academic', 'Personal'];
-
-  static const _symbols = [
-    Icons.folder_open,
-    Icons.menu_book_outlined,
-    Icons.school_outlined,
-    Icons.sell_outlined,
-    Icons.bookmark_outline,
-    Icons.auto_awesome,
-    Icons.work_outline,
-    Icons.home_outlined,
-    Icons.favorite_outline,
-    Icons.lightbulb_outline,
-  ];
-
-  static const _accents = [
-    Color(0xFFF59E0B),
-    Color(0xFF2E8B57),
-    Color(0xFF4F7CAC),
-    Color(0xFF9B6A9E),
-    Color(0xFFE07A5F),
-    Color(0xFFE85D9E),
-    Color(0xFF3B82F6),
-    Color(0xFF14B8A6),
-    Color(0xFF8B5CF6),
-    Color(0xFFEF4444),
-    Color(0xFF64748B),
-  ];
+  late String _selectedType = categoryTypes.first;
 
   void _refreshPreview() {
     if (mounted) setState(() {});
@@ -76,8 +47,9 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
     super.initState();
     _nameCtrl.text = widget.oldName;
     _nameCtrl.addListener(_refreshPreview);
-    _selectedType =
-        _types.contains(widget.oldType) ? widget.oldType : _types.last;
+    _selectedType = categoryTypes.contains(widget.oldType)
+        ? widget.oldType
+        : categoryTypes.last;
   }
 
   @override
@@ -155,73 +127,11 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: surface,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: secondary.withValues(alpha: 0.16),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Category Preview',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: secondary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: _selectedAccent.withValues(
-                                      alpha: 0.16,
-                                    ),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Icon(
-                                    _selectedIcon,
-                                    color: _selectedAccent,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    categoryName.isEmpty
-                                        ? 'Category Name'
-                                        : categoryName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
-                                      color: isDark
-                                          ? Colors.white
-                                          : const Color(0xFF17202A),
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.verified,
-                                  color: Color(0xFF2E8B57),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      CategoryPreviewCard(
+                        isDark: isDark,
+                        categoryName: categoryName,
+                        icon: _selectedIcon,
+                        accentColor: _selectedAccent,
                       ),
                       const SizedBox(height: 28),
                       Row(
@@ -270,8 +180,8 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                             ),
                           ),
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
                             return "Can't be empty";
                           }
                           return null;
@@ -285,9 +195,9 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      TypeSegmented(
+                      CategoryTypeSelector(
                         isDark: isDark,
-                        types: _types,
+                        types: categoryTypes,
                         selected: _selectedType,
                         onChanged: (type) =>
                             setState(() => _selectedType = type),
@@ -304,10 +214,10 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            for (final symbol in _symbols)
+                            for (final symbol in categorySymbols)
                               Padding(
                                 padding: const EdgeInsets.only(right: 10),
-                                child: SymbolChoice(
+                                child: CategorySymbolChoice(
                                   icon: symbol,
                                   selected: _selectedIcon == symbol,
                                   onTap: () => setState(() {
@@ -330,8 +240,8 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            for (final accent in _accents)
-                              ColorChoice(
+                            for (final accent in categoryAccents)
+                              CategoryAccentChoice(
                                 color: accent,
                                 selected: _selectedAccent == accent,
                                 onTap: () => setState(() {

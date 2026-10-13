@@ -7,7 +7,7 @@ class NoteModel {
   final String userId;
   final DateTime? createdAt;
 
-  NoteModel({
+  const NoteModel({
     required this.id,
     required this.note,
     required this.userId,

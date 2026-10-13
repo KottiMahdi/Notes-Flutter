@@ -45,7 +45,7 @@ void main() {
       final controller = AuthController(auth: auth, firestore: firestore);
 
       await controller.saveUserDetails(
-        UserModel(username: 'Owner', email: 'owner@example.com'),
+        const UserModel(username: 'Owner', email: 'owner@example.com'),
       );
 
       final saved = await firestore.collection('Users').doc('owner-1').get();
@@ -63,7 +63,7 @@ void main() {
 
       expect(
         () => controller.saveUserDetails(
-          UserModel(username: 'Nope', email: 'nope@example.com'),
+          const UserModel(username: 'Nope', email: 'nope@example.com'),
         ),
         throwsA(
           isA<FirebaseAuthException>().having(

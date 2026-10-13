@@ -1,7 +1,5 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
-
 import '../../../models/category_model.dart';
 
 /// Grid tile representing a single category, with tap-to-open and

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../models/category_model.dart';
 
 /// Shows the destructive "Delete category?" confirmation dialog.

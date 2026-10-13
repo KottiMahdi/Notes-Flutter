@@ -6,7 +6,7 @@ class CategoryModel {
   final int accentColor;
   final String type;
 
-  CategoryModel({
+  const CategoryModel({
     required this.id,
     required this.name,
     required this.userId,

@@ -82,7 +82,7 @@ void main() {
     final controller = _RecordingAuthController();
     await controller.signUp(email: 'jane@example.com', password: 'secret');
     await controller.saveUserDetails(
-      UserModel(username: 'jane', email: 'jane@example.com'),
+      const UserModel(username: 'jane', email: 'jane@example.com'),
     );
     await controller.sendEmailVerification();
 

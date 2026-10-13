@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-
 import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../models/category_model.dart';
-import '../../utils/app_error_messages.dart';
-import '../../utils/screen_cache.dart';
-import '../../utils/theme_mode_scope.dart';
+import '../../core/utils/app_error_messages.dart';
+import '../../core/utils/screen_cache.dart';
+import '../../core/widgets/theme_mode_scope.dart';
 import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
 import '../settings/settings_view.dart';
@@ -193,6 +192,7 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   void initState() {
+    super.initState();
     if (widget.categoryController == null) {
       final cached = ScreenCache.read<(List<CategoryModel>, Map<String, int>)>(
         'home',
@@ -204,7 +204,6 @@ class _HomeViewState extends State<HomeView> {
       }
     }
     _fetchCategories();
-    super.initState();
   }
 
   @override

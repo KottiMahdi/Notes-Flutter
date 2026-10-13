@@ -1,15 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AuthActionCancelledException implements Exception {
-  final String message;
-
-  const AuthActionCancelledException([
-    this.message = 'Google sign-in was cancelled.',
-  ]);
-
-  @override
-  String toString() => message;
-}
+import '../../services/auth_service.dart';
 
 class AppErrorMessages {
   const AppErrorMessages._();

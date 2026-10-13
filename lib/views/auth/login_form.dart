@@ -2,7 +2,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../../utils/app_error_messages.dart';
+import '../../core/utils/app_error_messages.dart';
 
 class LoginForm extends StatefulWidget {
   final AuthController? authController;
@@ -24,10 +24,10 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   void initState() {
+    super.initState();
     _emailCtrl = TextEditingController();
     _passwordCtrl = TextEditingController();
     _authController = widget.authController ?? AuthController();
-    super.initState();
   }
 
   @override

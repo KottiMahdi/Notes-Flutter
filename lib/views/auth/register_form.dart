@@ -1,9 +1,8 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
-
 import '../../controllers/auth_controller.dart';
 import '../../models/user_model.dart';
-import '../../utils/app_error_messages.dart';
+import '../../core/utils/app_error_messages.dart';
 
 class RegisterForm extends StatefulWidget {
   final AuthController? authController;
@@ -27,12 +26,12 @@ class _RegisterFormState extends State<RegisterForm> {
 
   @override
   void initState() {
+    super.initState();
     _usernameCtrl = TextEditingController();
     _emailCtrl = TextEditingController();
     _passwordCtrl = TextEditingController();
     _confirmPasswordCtrl = TextEditingController();
     _authController = widget.authController ?? AuthController();
-    super.initState();
   }
 
   @override

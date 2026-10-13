@@ -105,19 +105,19 @@ void main() {
         _wrapWithApp(
           HomeView(
             categoryController: _FilteringCategoryController([
-              CategoryModel(
+              const CategoryModel(
                 id: 'work-1',
                 name: 'Office folder',
                 userId: 'owner-user',
                 type: 'work',
               ),
-              CategoryModel(
+              const CategoryModel(
                 id: 'academic-1',
                 name: 'Study folder',
                 userId: 'owner-user',
                 type: 'Academic',
               ),
-              CategoryModel(
+              const CategoryModel(
                 id: 'personal-1',
                 name: 'Home folder',
                 userId: 'owner-user',

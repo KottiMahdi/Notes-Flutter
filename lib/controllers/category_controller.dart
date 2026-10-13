@@ -2,47 +2,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/category_model.dart';
+import '../services/auth_service.dart';
+import '../services/category_service.dart';
 
 class CategoryController {
-  final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final AuthService _authService;
+  final CategoryService _categoryService;
 
   CategoryController({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
-
-  CollectionReference<Map<String, dynamic>> get _categoriesRef =>
-      _firestore.collection('categories');
-
-  String? _ownerUid(Map<String, dynamic>? data) {
-    if (data == null) return null;
-    final value = data['userId'] ?? data['uid'] ?? data['id'];
-    return value is String ? value : null;
-  }
-
-  Future<void> _requireCurrentUser() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
-  }
+    AuthService? authService,
+    CategoryService? categoryService,
+  })  : _authService = authService ?? AuthService(auth: auth),
+        _categoryService =
+            categoryService ?? CategoryService(firestore: firestore);
 
   Future<void> _ensureCategoryOwnership(String docId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
+    final uid = _authService.requireCurrentUser().uid;
 
-    final doc = await _categoriesRef.doc(docId).get();
-    if (!doc.exists || _ownerUid(doc.data()) != uid) {
+    final category = await _categoryService.getCategory(docId);
+    if (category == null || category.userId != uid) {
       throw FirebaseException(
         plugin: 'firestore',
         message: 'You are not authorized to access this category.',
@@ -52,37 +32,23 @@ class CategoryController {
 
   // ── Fetch categories for the current user ───────────────────────────────────
   Future<List<CategoryModel>> getCategories() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
-
-    final snapshot = await _categoriesRef.where('userId', isEqualTo: uid).get();
-    return snapshot.docs
-        .map((doc) => CategoryModel.fromMap(doc.id, doc.data()))
-        .toList();
+    final uid = _authService.requireCurrentUser().uid;
+    return _categoryService.getCategories(uid);
   }
 
   Future<int> getNoteCount(String categoryId) async {
     await _ensureCategoryOwnership(categoryId);
-    final snapshot = await _categoriesRef
-        .doc(categoryId)
-        .collection('note')
-        .where('userId', isEqualTo: _auth.currentUser!.uid)
-        .get();
-    return snapshot.size;
+    return _categoryService.getNoteCount(
+      categoryId,
+      _authService.requireCurrentUser().uid,
+    );
   }
 
   // ── Fetch a single category owned by the current user ───────────────────────
   Future<CategoryModel> getCategory(String docId) async {
-    await _requireCurrentUser();
     await _ensureCategoryOwnership(docId);
 
-    final doc = await _categoriesRef.doc(docId).get();
-    return CategoryModel.fromMap(doc.id, doc.data()!);
+    return (await _categoryService.getCategory(docId))!;
   }
 
   // ── Add a new category ─────────────────────────────────────────────────────
@@ -92,26 +58,41 @@ class CategoryController {
     int accentColor = 0xFFF59E0B,
     String type = 'Personal',
   }) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw FirebaseAuthException(
-        code: 'no-current-user',
-        message: 'There is no authenticated user.',
-      );
-    }
+    final uid = _authService.requireCurrentUser().uid;
 
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
       throw ArgumentError.value(name, 'name', 'Category name cannot be empty.');
     }
 
-    await _categoriesRef.add({
-      'name': trimmedName,
-      'userId': uid,
-      'iconCode': iconCode,
-      'accentColor': accentColor,
-      'type': type,
-    });
+    await _categoryService.addCategory(
+      uid: uid,
+      name: trimmedName,
+      iconCode: iconCode,
+      accentColor: accentColor,
+      type: type,
+    );
+  }
+
+  Future<
+      ({
+        CategoryModel category,
+        List<CategoryModel> categories,
+      })> getOrCreateUncategorizedCategory(List<CategoryModel> categories) async {
+    for (final category in categories) {
+      if (category.name.trim().toLowerCase() == 'uncategorized') {
+        return (category: category, categories: categories);
+      }
+    }
+
+    await addCategory('Uncategorized');
+    final updatedCategories = await getCategories();
+    for (final category in updatedCategories) {
+      if (category.name.trim().toLowerCase() == 'uncategorized') {
+        return (category: category, categories: updatedCategories);
+      }
+    }
+    throw StateError('The Uncategorized category could not be found.');
   }
 
   // ── Update a category's name ───────────────────────────────────────────────
@@ -122,7 +103,7 @@ class CategoryController {
     int? accentColor,
     String? type,
   }) async {
-    await _requireCurrentUser();
+    final uid = _authService.requireCurrentUser().uid;
     await _ensureCategoryOwnership(docId);
 
     final trimmedName = newName.trim();
@@ -131,22 +112,21 @@ class CategoryController {
           newName, 'newName', 'Category name cannot be empty.');
     }
 
-    final updates = <String, dynamic>{
-      'name': trimmedName,
-      'userId': _auth.currentUser!.uid,
-    };
-    if (iconCode != null) updates['iconCode'] = iconCode;
-    if (accentColor != null) updates['accentColor'] = accentColor;
-    if (type != null) updates['type'] = type;
-
-    await _categoriesRef.doc(docId).update(updates);
+    await _categoryService.updateCategory(
+      categoryId: docId,
+      uid: uid,
+      name: trimmedName,
+      iconCode: iconCode,
+      accentColor: accentColor,
+      type: type,
+    );
   }
 
   // ── Delete a category ──────────────────────────────────────────────────────
   Future<void> deleteCategory(String docId) async {
-    await _requireCurrentUser();
+    _authService.requireCurrentUser();
     await _ensureCategoryOwnership(docId);
 
-    await _categoriesRef.doc(docId).delete();
+    await _categoryService.deleteCategory(docId);
   }
 }
