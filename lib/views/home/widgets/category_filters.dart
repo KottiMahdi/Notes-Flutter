@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-const categoryFilterLabels = ['All', 'Work', 'Academic', 'Personal'];
+import '../category_filter_options.dart';
 
 /// Segmented filter row shown above the categories grid.
 class CategoryFilters extends StatelessWidget {

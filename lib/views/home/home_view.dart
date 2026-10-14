@@ -3,7 +3,6 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../models/category_model.dart';
 import '../../core/utils/app_error_messages.dart';
-import '../../core/utils/screen_cache.dart';
 import '../../core/widgets/theme_mode_scope.dart';
 import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
@@ -15,6 +14,8 @@ import 'widgets/delete_category_dialog.dart';
 import 'widgets/empty_categories.dart';
 import 'widgets/manage_category_sheet.dart';
 import 'widgets/success_dialog.dart';
+import 'category_filter_options.dart';
+import 'home_view_model.dart';
 
 class HomeView extends StatefulWidget {
   final CategoryController? categoryController;
@@ -34,25 +35,10 @@ class _HomeViewState extends State<HomeView> {
       widget.categoryController ?? CategoryController();
   late final AuthController _authController =
       widget.authController ?? AuthController();
-
-  bool _isLoading = true;
-  int _segmentIndex = 0;
-  final Set<String> _deletingCategoryIds = {};
-  List<CategoryModel> _categories = [];
-  Map<String, int> _noteCounts = {};
-
-  List<CategoryModel> get _visibleCategories {
-    final selectedFilter = categoryFilterLabels[_segmentIndex];
-    if (selectedFilter == 'All') return _categories;
-
-    return _categories
-        .where(
-          (category) =>
-              category.type.trim().toLowerCase() ==
-              selectedFilter.toLowerCase(),
-        )
-        .toList();
-  }
+  late final HomeViewModel _viewModel = HomeViewModel(
+    categoryController: _categoryController,
+    useCache: widget.categoryController == null,
+  );
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -60,30 +46,11 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Future<void> _fetchCategories({bool showLoading = false}) async {
-    if (showLoading && mounted) {
-      setState(() => _isLoading = true);
-    }
-
+  Future<void> _loadCategories({bool showLoading = false}) async {
     try {
-      final categories = await _categoryController.getCategories();
-      final noteCounts = <String, int>{};
-      for (final category in categories) {
-        noteCounts[category.id] =
-            await _categoryController.getNoteCount(category.id);
-      }
-      if (!mounted) return;
-      if (widget.categoryController == null) {
-        ScreenCache.write('home', (categories, noteCounts));
-      }
-      setState(() {
-        _categories = categories;
-        _noteCounts = noteCounts;
-        _isLoading = false;
-      });
+      await _viewModel.loadCategories(showLoading: showLoading);
     } catch (error) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
       _showSnackBar(
         AppErrorMessages.fromException(
           error,
@@ -100,7 +67,7 @@ class _HomeViewState extends State<HomeView> {
       ),
     );
     if (!mounted) return;
-    await _fetchCategories();
+    await _loadCategories();
   }
 
   Future<void> _openAddCategory() async {
@@ -113,7 +80,7 @@ class _HomeViewState extends State<HomeView> {
         message: 'Your new category is ready to hold notes.',
       );
       if (!mounted) return;
-      await _fetchCategories();
+      await _loadCategories();
     }
   }
 
@@ -137,19 +104,13 @@ class _HomeViewState extends State<HomeView> {
         message: 'Your changes have been saved.',
       );
       if (!mounted) return;
-      await _fetchCategories();
+      await _loadCategories();
     }
   }
 
   Future<void> _deleteCategory(CategoryModel category) async {
-    final id = category.id;
-    if (_deletingCategoryIds.contains(id)) return;
-
-    setState(() => _deletingCategoryIds.add(id));
     try {
-      await _categoryController.deleteCategory(id);
-      if (!mounted) return;
-      await _fetchCategories();
+      await _viewModel.deleteCategory(category);
       if (!mounted) return;
       await showSuccessDialog(
         context: context,
@@ -164,10 +125,6 @@ class _HomeViewState extends State<HomeView> {
           fallback: 'Could not delete the category. Please try again.',
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _deletingCategoryIds.remove(id));
-      }
     }
   }
 
@@ -193,28 +150,33 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    if (widget.categoryController == null) {
-      final cached = ScreenCache.read<(List<CategoryModel>, Map<String, int>)>(
-        'home',
-      );
-      if (cached != null) {
-        _categories = cached.$1;
-        _noteCounts = cached.$2;
-        _isLoading = false;
-      }
-    }
-    _fetchCategories();
+    _viewModel.initialize();
+    _loadCategories();
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, child) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
+    final viewModel = _viewModel;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final muted = isDark ? Colors.white60 : const Color(0xFF6B7280);
     final isNarrow = MediaQuery.sizeOf(context).width < 400;
-    final visibleCategories = _visibleCategories;
-    final selectedFilter = categoryFilterLabels[_segmentIndex];
-    final sectionTitle = _segmentIndex == 0
+    final visibleCategories = viewModel.visibleCategories;
+    final selectedFilter = categoryFilterLabels[viewModel.selectedFilterIndex];
+    final sectionTitle = viewModel.selectedFilterIndex == 0
         ? 'ALL WORKSPACES'
         : '${selectedFilter.toUpperCase()} CATEGORIES';
 
@@ -230,7 +192,7 @@ class _HomeViewState extends State<HomeView> {
             tooltip: 'Add category',
             backgroundColor: const Color(0xFFF59E0B),
             foregroundColor: Colors.white,
-            onPressed: _isLoading ? null : _openAddCategory,
+            onPressed: viewModel.isLoading ? null : _openAddCategory,
             child: const Icon(Icons.add_circle_outline, size: 28),
           ),
         ),
@@ -269,7 +231,7 @@ class _HomeViewState extends State<HomeView> {
             ),
             const SizedBox(width: 8),
             Tooltip(
-              message: '${_categories.length} Active categories',
+              message: '${viewModel.categories.length} Active categories',
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: isNarrow ? 9 : 13,
@@ -282,7 +244,7 @@ class _HomeViewState extends State<HomeView> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Text(
-                  '${_categories.length} Active',
+                  '${viewModel.categories.length} Active',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: isDark
                         ? const Color(0xFFFFB74D)
@@ -301,7 +263,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       body: SafeArea(
         top: false,
-        child: _isLoading
+        child: viewModel.isLoading
             ? const Center(child: CircularProgressIndicator())
             : CustomScrollView(
                 slivers: [
@@ -313,9 +275,8 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           CategoryFilters(
                             isDark: isDark,
-                            selectedIndex: _segmentIndex,
-                            onChanged: (index) =>
-                                setState(() => _segmentIndex = index),
+                            selectedIndex: viewModel.selectedFilterIndex,
+                            onChanged: viewModel.selectFilter,
                           ),
                           const SizedBox(height: 30),
                           Row(
@@ -338,7 +299,7 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ),
                   ),
-                  if (_categories.isEmpty)
+                  if (viewModel.categories.isEmpty)
                     const SliverFillRemaining(
                       hasScrollBody: false,
                       child: EmptyCategories(),
@@ -357,25 +318,25 @@ class _HomeViewState extends State<HomeView> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                       sliver: SliverGrid(
                         delegate: SliverChildBuilderDelegate(
-                          (context, i) => CategoryCard(
-                            category: visibleCategories[i],
-                            noteCount:
-                                _noteCounts[visibleCategories[i].id] ?? 0,
-                            isDeleting: _deletingCategoryIds.contains(
-                              visibleCategories[i].id,
-                            ),
-                            muted: muted,
-                            onOpen: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => NoteListView(
-                                  categoryId: visibleCategories[i].id,
+                          (context, i) {
+                            final category = visibleCategories[i];
+                            return CategoryCard(
+                              key: ValueKey(category.id),
+                              category: category,
+                              noteCount: viewModel.noteCounts[category.id] ?? 0,
+                              isDeleting: viewModel.deletingCategoryIds
+                                  .contains(category.id),
+                              muted: muted,
+                              onOpen: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      NoteListView(categoryId: category.id),
                                 ),
                               ),
-                            ),
-                            onManage: () => _showManageCategorySheet(
-                              visibleCategories[i],
-                            ),
-                          ),
+                              onManage: () =>
+                                  _showManageCategorySheet(category),
+                            );
+                          },
                           childCount: visibleCategories.length,
                         ),
                         gridDelegate:
