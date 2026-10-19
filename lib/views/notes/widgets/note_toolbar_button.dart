@@ -34,8 +34,8 @@ class NoteToolbarButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             onTap: onTap,
             child: SizedBox(
-              width: 36,
-              height: 36,
+              width: 48,
+              height: 48,
               child: Icon(
                 icon,
                 size: 18,

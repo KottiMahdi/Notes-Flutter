@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/error/guarded_call.dart';
 import '../models/note_model.dart';
 
 class NoteService {
@@ -14,23 +15,26 @@ class NoteService {
   CollectionReference<Map<String, dynamic>> _notes(String categoryId) =>
       _category(categoryId).collection('note');
 
-  Future<String?> getCategoryOwnerId(String categoryId) async {
-    final category = await _category(categoryId).get();
-    return _ownerUid(category.data());
-  }
+  Future<String?> getCategoryOwnerId(String categoryId) =>
+      guardedCall(() async {
+        final category = await _category(categoryId).get();
+        return _ownerUid(category.data());
+      });
 
-  Future<String?> getNoteOwnerId(String categoryId, String noteId) async {
-    final note = await _notes(categoryId).doc(noteId).get();
-    return _ownerUid(note.data());
-  }
+  Future<String?> getNoteOwnerId(String categoryId, String noteId) =>
+      guardedCall(() async {
+        final note = await _notes(categoryId).doc(noteId).get();
+        return _ownerUid(note.data());
+      });
 
-  Future<List<NoteModel>> getNotes(String categoryId, String uid) async {
-    final snapshot =
-        await _notes(categoryId).where('userId', isEqualTo: uid).get();
-    return snapshot.docs
-        .map((doc) => NoteModel.fromMap(doc.id, doc.data()))
-        .toList();
-  }
+  Future<List<NoteModel>> getNotes(String categoryId, String uid) =>
+      guardedCall(() async {
+        final snapshot =
+            await _notes(categoryId).where('userId', isEqualTo: uid).get();
+        return snapshot.docs
+            .map((doc) => NoteModel.fromMap(doc.id, doc.data()))
+            .toList();
+      });
 
   Future<void> addNote({
     required String categoryId,
@@ -38,12 +42,15 @@ class NoteService {
     required String note,
     required String title,
   }) {
-    return _notes(categoryId).add({
-      'note': note,
-      'title': title,
-      'userId': uid,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    return guardedCall(
+      isWrite: true,
+      () => _notes(categoryId).add({
+        'note': note,
+        'title': title,
+        'userId': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      }),
+    );
   }
 
   Future<void> editNote({
@@ -53,15 +60,21 @@ class NoteService {
     required String note,
     required String title,
   }) {
-    return _notes(categoryId).doc(noteId).update({
-      'note': note,
-      'title': title,
-      'userId': uid,
-    });
+    return guardedCall(
+      isWrite: true,
+      () => _notes(categoryId).doc(noteId).update({
+        'note': note,
+        'title': title,
+        'userId': uid,
+      }),
+    );
   }
 
   Future<void> deleteNote(String categoryId, String noteId) {
-    return _notes(categoryId).doc(noteId).delete();
+    return guardedCall(
+      isWrite: true,
+      () => _notes(categoryId).doc(noteId).delete(),
+    );
   }
 
   String? _ownerUid(Map<String, dynamic>? data) {

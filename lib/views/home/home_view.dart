@@ -3,6 +3,9 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../models/category_model.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_snack_bar.dart';
+import '../../core/widgets/error_view.dart';
+import '../../core/widgets/loading_view.dart';
 import '../../core/widgets/theme_mode_scope.dart';
 import '../categories/update_category_view.dart';
 import '../notes/note_list_view.dart';
@@ -39,24 +42,31 @@ class _HomeViewState extends State<HomeView> {
     categoryController: _categoryController,
     useCache: widget.categoryController == null,
   );
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  String? _loadError;
+  bool _isOpeningAddCategory = false;
+  final Set<String> _openingCategoryIds = {};
 
   Future<void> _loadCategories({bool showLoading = false}) async {
+    if (mounted) {
+      setState(() => _loadError = null);
+    }
     try {
       await _viewModel.loadCategories(showLoading: showLoading);
     } catch (error) {
       if (!mounted) return;
-      _showSnackBar(
-        AppErrorMessages.fromException(
-          error,
-          fallback: 'Could not load categories. Please try again.',
-        ),
+      final message = AppErrorMessages.fromException(
+        error,
+        fallback: 'Could not load categories. Please try again.',
       );
+      if (_viewModel.categories.isEmpty) {
+        setState(() => _loadError = message);
+      } else {
+        showRetrySnackBar(
+          context,
+          message: message,
+          onRetry: () => _loadCategories(showLoading: false),
+        );
+      }
     }
   }
 
@@ -70,47 +80,79 @@ class _HomeViewState extends State<HomeView> {
     await _loadCategories();
   }
 
-  Future<void> _openAddCategory() async {
-    final changed = await Navigator.of(context).pushNamed('addCategory');
-    if (!mounted) return;
-    if (changed == true) {
-      await showSuccessDialog(
-        context: context,
-        title: 'Category added',
-        message: 'Your new category is ready to hold notes.',
+  Future<void> _openCategoryNotes(CategoryModel category) async {
+    if (!_openingCategoryIds.add(category.id)) return;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => NoteListView(
+            categoryId: category.id,
+            categoryName: category.name,
+          ),
+        ),
       );
       if (!mounted) return;
       await _loadCategories();
+    } finally {
+      _openingCategoryIds.remove(category.id);
+    }
+  }
+
+  Future<void> _openAddCategory() async {
+    if (_isOpeningAddCategory) return;
+    setState(() => _isOpeningAddCategory = true);
+    try {
+      final changed = await Navigator.of(context).pushNamed('addCategory');
+      if (!mounted) return;
+      if (changed == true) {
+        await showSuccessDialog(
+          context: context,
+          title: 'Category added',
+          message: 'Your new category is ready to hold notes.',
+        );
+        if (!mounted) return;
+        await _loadCategories();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isOpeningAddCategory = false);
+      }
     }
   }
 
   Future<void> _openEditCategory(CategoryModel category) async {
-    final changed = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => UpdateCategoryView(
-          docId: category.id,
-          oldName: category.name,
-          oldIconCode: category.iconCode,
-          oldAccentColor: category.accentColor,
-          oldType: category.type,
+    if (!_openingCategoryIds.add(category.id)) return;
+    try {
+      final changed = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => UpdateCategoryView(
+            docId: category.id,
+            oldName: category.name,
+            oldIconCode: category.iconCode,
+            oldAccentColor: category.accentColor,
+            oldType: category.type,
+          ),
         ),
-      ),
-    );
-    if (!mounted) return;
-    if (changed == true) {
-      await showSuccessDialog(
-        context: context,
-        title: 'Category updated',
-        message: 'Your changes have been saved.',
       );
       if (!mounted) return;
-      await _loadCategories();
+      if (changed == true) {
+        await showSuccessDialog(
+          context: context,
+          title: 'Category updated',
+          message: 'Your changes have been saved.',
+        );
+        if (!mounted) return;
+        await _loadCategories();
+      }
+    } finally {
+      _openingCategoryIds.remove(category.id);
     }
   }
 
   Future<void> _deleteCategory(CategoryModel category) async {
     try {
-      await _viewModel.deleteCategory(category);
+      final deleted = await _viewModel.deleteCategory(category);
+      if (!deleted) return;
       if (!mounted) return;
       await showSuccessDialog(
         context: context,
@@ -119,11 +161,13 @@ class _HomeViewState extends State<HomeView> {
       );
     } catch (error) {
       if (!mounted) return;
-      _showSnackBar(
-        AppErrorMessages.fromException(
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
           error,
           fallback: 'Could not delete the category. Please try again.',
         ),
+        onRetry: () => _deleteCategory(category),
       );
     }
   }
@@ -162,40 +206,47 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _viewModel,
-      builder: (context, child) => _buildScaffold(context),
-    );
+    return _buildScaffold(context);
   }
 
   Widget _buildScaffold(BuildContext context) {
-    final viewModel = _viewModel;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final muted = isDark ? Colors.white60 : const Color(0xFF6B7280);
     final isNarrow = MediaQuery.sizeOf(context).width < 400;
-    final visibleCategories = viewModel.visibleCategories;
-    final selectedFilter = categoryFilterLabels[viewModel.selectedFilterIndex];
-    final sectionTitle = viewModel.selectedFilterIndex == 0
-        ? 'ALL WORKSPACES'
-        : '${selectedFilter.toUpperCase()} CATEGORIES';
+    final muted = isDark ? Colors.white60 : const Color(0xFF6B7280);
 
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF121212) : const Color(0xFFFFFCF7),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: SizedBox(
-          height: 54,
-          child: FloatingActionButton(
-            tooltip: 'Add category',
-            backgroundColor: const Color(0xFFF59E0B),
-            foregroundColor: Colors.white,
-            onPressed: viewModel.isLoading ? null : _openAddCategory,
-            child: const Icon(Icons.add_circle_outline, size: 28),
-          ),
-        ),
+      floatingActionButton: AnimatedBuilder(
+        animation: _viewModel,
+        builder: (context, child) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: SizedBox(
+              height: 54,
+              child: FloatingActionButton(
+                tooltip: 'Add category',
+                backgroundColor: const Color(0xFFF59E0B),
+                foregroundColor: const Color(0xFF17202A),
+                onPressed: _viewModel.isLoading || _isOpeningAddCategory
+                    ? null
+                    : _openAddCategory,
+                child: _isOpeningAddCategory
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF17202A),
+                        ),
+                      )
+                    : const Icon(Icons.add_circle_outline, size: 28),
+              ),
+            ),
+          );
+        },
       ),
       appBar: AppBar(
         elevation: 0,
@@ -213,7 +264,7 @@ class _HomeViewState extends State<HomeView> {
               ),
               child: const Icon(
                 Icons.sticky_note_2_outlined,
-                color: Colors.white,
+                color: Color(0xFF17202A),
                 size: 18,
               ),
             ),
@@ -230,28 +281,38 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             const SizedBox(width: 8),
-            Tooltip(
-              message: '${viewModel.categories.length} Active categories',
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isNarrow ? 9 : 13,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFFC66A00).withValues(alpha: 0.24)
-                      : const Color(0xFFFFF1D6),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                  '${viewModel.categories.length} Active',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: isDark
-                        ? const Color(0xFFFFB74D)
-                        : const Color(0xFFC66A00),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+            Flexible(
+              child: AnimatedBuilder(
+                animation: _viewModel,
+                builder: (context, child) {
+                  final categoryCount = _viewModel.categories.length;
+                  return Tooltip(
+                    message: '$categoryCount Active categories',
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isNarrow ? 9 : 13,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFFC66A00).withValues(alpha: 0.24)
+                            : const Color(0xFFFFF1D6),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Text(
+                        '$categoryCount Active',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: isDark
+                              ? const Color(0xFFFFB74D)
+                              : theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -263,93 +324,135 @@ class _HomeViewState extends State<HomeView> {
       ),
       body: SafeArea(
         top: false,
-        child: viewModel.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        child: AnimatedBuilder(
+          animation: _viewModel,
+          builder: (context, child) {
+            final viewModel = _viewModel;
+            final visibleCategories = viewModel.visibleCategories;
+            final selectedFilter =
+                categoryFilterLabels[viewModel.selectedFilterIndex];
+            final sectionTitle = viewModel.selectedFilterIndex == 0
+                ? 'ALL WORKSPACES'
+                : '${selectedFilter.toUpperCase()} CATEGORIES';
+
+            return viewModel.isLoading
+                ? const LoadingView(message: 'Loading categories')
+                : _loadError != null && viewModel.categories.isEmpty
+                    ? ErrorView(
+                        message: _loadError!,
+                        onRetry: () => _loadCategories(showLoading: true),
+                      )
+                    : Column(
                         children: [
-                          CategoryFilters(
-                            isDark: isDark,
-                            selectedIndex: viewModel.selectedFilterIndex,
-                            onChanged: viewModel.selectFilter,
-                          ),
-                          const SizedBox(height: 30),
-                          Row(
-                            children: [
-                              Text(
-                                sectionTitle,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: isDark
-                                      ? Colors.white70
-                                      : const Color(0xFF8EA1BC),
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.4,
+                          if (viewModel.isRefreshing)
+                            const LinearProgressIndicator(
+                              minHeight: 2,
+                              semanticsLabel: 'Refreshing categories',
+                            ),
+                          Expanded(
+                            child: CustomScrollView(
+                              slivers: [
+                                SliverPadding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 8, 20, 10),
+                                  sliver: SliverToBoxAdapter(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        CategoryFilters(
+                                          isDark: isDark,
+                                          selectedIndex:
+                                              viewModel.selectedFilterIndex,
+                                          onChanged: viewModel.selectFilter,
+                                        ),
+                                        const SizedBox(height: 30),
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                sectionTitle,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: theme
+                                                    .textTheme.titleSmall
+                                                    ?.copyWith(
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : theme.colorScheme
+                                                          .onSurfaceVariant,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.4,
+                                                ),
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 14),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                            ],
+                                if (viewModel.categories.isEmpty)
+                                  SliverFillRemaining(
+                                    hasScrollBody: false,
+                                    child: EmptyCategories(
+                                        onAddCategory: _openAddCategory),
+                                  )
+                                else if (visibleCategories.isEmpty)
+                                  SliverFillRemaining(
+                                    hasScrollBody: false,
+                                    child: EmptyCategories(
+                                      title: 'No $selectedFilter categories',
+                                      message:
+                                          'Try another filter or add a ${selectedFilter.toLowerCase()} category.',
+                                      onAddCategory: _openAddCategory,
+                                    ),
+                                  )
+                                else
+                                  SliverPadding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        20, 0, 20, 120),
+                                    sliver: SliverGrid(
+                                      delegate: SliverChildBuilderDelegate(
+                                        (context, i) {
+                                          final category = visibleCategories[i];
+                                          return CategoryCard(
+                                            key: ValueKey(category.id),
+                                            category: category,
+                                            noteCount: viewModel
+                                                    .noteCounts[category.id] ??
+                                                0,
+                                            isDeleting: viewModel
+                                                .deletingCategoryIds
+                                                .contains(category.id),
+                                            muted: muted,
+                                            onOpen: () =>
+                                                _openCategoryNotes(category),
+                                            onManage: () =>
+                                                _showManageCategorySheet(
+                                                    category),
+                                          );
+                                        },
+                                        childCount: visibleCategories.length,
+                                      ),
+                                      gridDelegate:
+                                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                                        maxCrossAxisExtent: 260,
+                                        childAspectRatio: 0.86,
+                                        crossAxisSpacing: 30,
+                                        mainAxisSpacing: 14,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 14),
                         ],
-                      ),
-                    ),
-                  ),
-                  if (viewModel.categories.isEmpty)
-                    const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: EmptyCategories(),
-                    )
-                  else if (visibleCategories.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: EmptyCategories(
-                        title: 'No $selectedFilter categories',
-                        message:
-                            'Try another filter or add a ${selectedFilter.toLowerCase()} category.',
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-                      sliver: SliverGrid(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) {
-                            final category = visibleCategories[i];
-                            return CategoryCard(
-                              key: ValueKey(category.id),
-                              category: category,
-                              noteCount: viewModel.noteCounts[category.id] ?? 0,
-                              isDeleting: viewModel.deletingCategoryIds
-                                  .contains(category.id),
-                              muted: muted,
-                              onOpen: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      NoteListView(categoryId: category.id),
-                                ),
-                              ),
-                              onManage: () =>
-                                  _showManageCategorySheet(category),
-                            );
-                          },
-                          childCount: visibleCategories.length,
-                        ),
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 260,
-                          childAspectRatio: 0.86,
-                          crossAxisSpacing: 30,
-                          mainAxisSpacing: 14,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+                      );
+          },
+        ),
       ),
       bottomNavigationBar: AppBottomNav(
         isDark: isDark,

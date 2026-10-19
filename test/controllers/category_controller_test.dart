@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notes_management_mobile_application/controllers/category_controller.dart';
+import 'package:notes_management_mobile_application/core/error/failures.dart';
 
 void main() {
   group('CategoryController', () {
@@ -145,7 +146,7 @@ void main() {
 
       expect(
         () => controller.getCategories(),
-        throwsA(isA<FirebaseAuthException>()),
+        throwsA(isA<AuthenticationFailure>()),
       );
     });
   });

@@ -48,6 +48,11 @@ android/app/key.properties
 *.jks
 *.keystore
 *.p12
+*.pem
+*.p8
+*.mobileprovision
+**/serviceAccountKey.json
+**/*firebase-adminsdk*.json
 
 # Local environment and secret configuration
 .env

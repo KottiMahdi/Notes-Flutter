@@ -8,6 +8,8 @@ import '../services/category_service.dart';
 import '../services/note_service.dart';
 
 class NoteController {
+  static const _allNotesFetchBatchSize = 10;
+
   final AuthService _authService;
   final NoteService _noteService;
   final CategoryService _categoryService;
@@ -30,6 +32,7 @@ class NoteController {
     if (ownerUid != uid) {
       throw FirebaseException(
         plugin: 'firestore',
+        code: 'permission-denied',
         message: 'You are not authorized to access this category.',
       );
     }
@@ -44,6 +47,7 @@ class NoteController {
     if (ownerUid != uid) {
       throw FirebaseException(
         plugin: 'firestore',
+        code: 'permission-denied',
         message: 'You are not authorized to access this note.',
       );
     }
@@ -75,17 +79,26 @@ class NoteController {
     final categories = await _categoryService.getCategories(uid);
     final entries = <CategorizedNoteModel>[];
 
-    for (final category in categories) {
-      final notes = await getNotes(category.id);
-      entries.addAll(
-        notes.map(
-          (note) => CategorizedNoteModel(
-            note: note,
-            categoryId: category.id,
-            categoryName: category.name,
-          ),
-        ),
+    for (var offset = 0;
+        offset < categories.length;
+        offset += _allNotesFetchBatchSize) {
+      final categoryBatch =
+          categories.skip(offset).take(_allNotesFetchBatchSize);
+      final categoryEntries = await Future.wait(
+        categoryBatch.map((category) async {
+          final notes = await getNotes(category.id);
+          return notes
+              .map(
+                (note) => CategorizedNoteModel(
+                  note: note,
+                  categoryId: category.id,
+                  categoryName: category.name,
+                ),
+              )
+              .toList();
+        }),
       );
+      entries.addAll(categoryEntries.expand((items) => items));
     }
     entries.sort((a, b) {
       final aCreatedAt = a.note.createdAt;

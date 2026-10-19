@@ -16,6 +16,7 @@ class CategoryFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inactiveColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
       height: 64,
       padding: const EdgeInsets.all(5),
@@ -44,24 +45,35 @@ class CategoryFilters extends StatelessWidget {
                         ],
                       )
                     : null,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(28),
-                  onTap: () => onChanged(index),
-                  child: Center(
-                    child: Text(
-                      categoryFilterLabels[index],
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: index == selectedIndex
-                                ? (isDark
-                                    ? Colors.white
-                                    : const Color(0xFF17202A))
-                                : (isDark
-                                    ? Colors.white60
-                                    : const Color(0xFF60738E)),
-                            fontWeight: index == selectedIndex
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                          ),
+                child: Semantics(
+                  button: true,
+                  selected: index == selectedIndex,
+                  inMutuallyExclusiveGroup: true,
+                  label: categoryFilterLabels[index],
+                  child: SizedBox.expand(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(28),
+                      onTap: () => onChanged(index),
+                      child: Center(
+                        child: Text(
+                          categoryFilterLabels[index],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                color: index == selectedIndex
+                                    ? (isDark
+                                        ? Colors.white
+                                        : const Color(0xFF17202A))
+                                    : (isDark ? Colors.white60 : inactiveColor),
+                                fontWeight: index == selectedIndex
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                              ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

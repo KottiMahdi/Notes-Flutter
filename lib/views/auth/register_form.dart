@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/auth_controller.dart';
 import '../../models/user_model.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_error_dialog.dart';
 
 class RegisterForm extends StatefulWidget {
   final AuthController? authController;
@@ -21,6 +22,7 @@ class _RegisterFormState extends State<RegisterForm> {
   late TextEditingController _confirmPasswordCtrl;
   bool _isObscured = true;
   bool _isLoading = false;
+  bool _accountCreated = false;
 
   late final AuthController _authController;
 
@@ -81,10 +83,13 @@ class _RegisterFormState extends State<RegisterForm> {
 
     setState(() => _isLoading = true);
     try {
-      await _authController.signUp(
-        email: _emailCtrl.text,
-        password: _passwordCtrl.text,
-      );
+      if (!_accountCreated) {
+        await _authController.signUp(
+          email: _emailCtrl.text,
+          password: _passwordCtrl.text,
+        );
+        _accountCreated = true;
+      }
       await _authController.saveUserDetails(
         UserModel(
           username: _usernameCtrl.text.trim(),
@@ -106,18 +111,15 @@ class _RegisterFormState extends State<RegisterForm> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      AwesomeDialog(
-        context: context,
-        dialogType: DialogType.error,
-        animType: AnimType.rightSlide,
-        title: 'Error',
-        desc: AppErrorMessages.fromException(
+      await showRetryErrorDialog(
+        context,
+        message: AppErrorMessages.fromException(
           error,
           fallback:
               'Registration failed. Please check your details and try again.',
         ),
-        btnOkOnPress: () {},
-      ).show();
+        onRetry: _register,
+      );
     }
   }
 

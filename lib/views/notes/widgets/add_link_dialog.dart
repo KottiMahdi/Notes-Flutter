@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/error/app_logger.dart';
+import '../../../core/widgets/scrollable_dialog_content.dart';
+import '../../../core/widgets/retry_snack_bar.dart';
 
 class LinkResult {
   final String? url;
@@ -45,13 +48,21 @@ class _AddLinkDialogState extends State<AddLinkDialog> {
     if (uri != null && uri.hasAuthority) {
       try {
         opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } catch (_) {
+      } catch (error, stackTrace) {
+        AppLogger.error(
+          'Could not open external link.',
+          error: error,
+          stackTrace: stackTrace,
+          name: 'links',
+        );
         opened = false;
       }
     }
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open this link.')),
+      showRetrySnackBar(
+        context,
+        message: 'Could not open this link.',
+        onRetry: _openLink,
       );
     }
   }
@@ -72,8 +83,7 @@ class _AddLinkDialogState extends State<AddLinkDialog> {
     return Dialog(
       backgroundColor: surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+      child: ScrollableDialogContent(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +199,7 @@ class _AddLinkDialogState extends State<AddLinkDialog> {
                     onPressed: _save,
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: onSurface,
                       padding: buttonPadding,
                       shape: buttonShape,
                     ),

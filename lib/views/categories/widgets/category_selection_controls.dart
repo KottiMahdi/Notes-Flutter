@@ -15,6 +15,19 @@ const categorySymbols = [
   Icons.lightbulb_outline,
 ];
 
+const _categorySymbolLabels = [
+  'Folder',
+  'Book',
+  'School',
+  'Tag',
+  'Bookmark',
+  'Sparkle',
+  'Work',
+  'Home',
+  'Favorite',
+  'Idea',
+];
+
 const categoryAccents = [
   Color(0xFFF59E0B),
   Color(0xFF2E8B57),
@@ -27,6 +40,20 @@ const categoryAccents = [
   Color(0xFF8B5CF6),
   Color(0xFFEF4444),
   Color(0xFF64748B),
+];
+
+const _categoryAccentLabels = [
+  'Amber',
+  'Green',
+  'Blue gray',
+  'Mauve',
+  'Terracotta',
+  'Pink',
+  'Blue',
+  'Teal',
+  'Purple',
+  'Red',
+  'Slate',
 ];
 
 class CategoryPreviewCard extends StatelessWidget {
@@ -63,19 +90,27 @@ class CategoryPreviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                'Category Preview',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: secondary,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  'Category Preview',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               if (showNoteCount)
-                const Text(
-                  '  •  0 notes',
-                  style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 12,
+                const Flexible(
+                  child: Text(
+                    '  •  0 notes',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
             ],
@@ -85,7 +120,7 @@ class CategoryPreviewCard extends StatelessWidget {
             children: [
               Container(
                 width: 52,
-                height: 52,
+                height: 58,
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(14),
@@ -157,24 +192,35 @@ class CategoryTypeSelector extends StatelessWidget {
                         ],
                       )
                     : null,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(24),
-                  onTap: () => onChanged(type),
-                  child: Center(
-                    child: Text(
-                      type,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: type == selected
-                                ? (isDark
-                                    ? Colors.white
-                                    : const Color(0xFF17202A))
-                                : (isDark
-                                    ? Colors.white60
-                                    : const Color(0xFF60738E)),
-                            fontWeight: type == selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
+                child: Semantics(
+                  button: true,
+                  selected: type == selected,
+                  inMutuallyExclusiveGroup: true,
+                  label: type,
+                  child: SizedBox.expand(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => onChanged(type),
+                      child: Center(
+                        child: Text(
+                          type,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: type == selected
+                                        ? (isDark
+                                            ? Colors.white
+                                            : const Color(0xFF17202A))
+                                        : (isDark
+                                            ? Colors.white60
+                                            : const Color(0xFF60738E)),
+                                    fontWeight: type == selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -200,31 +246,41 @@ class CategorySymbolChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final index = categorySymbols.indexOf(icon);
+    final label = index >= 0
+        ? '${_categorySymbolLabels[index]} category symbol'
+        : 'Category symbol';
     return Semantics(
       button: true,
       selected: selected,
-      label: 'Choose category symbol',
+      label: label,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFFFE7B0) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected
-                  ? const Color(0xFFF59E0B)
-                  : Theme.of(context).colorScheme.outlineVariant,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFFFFE7B0) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFFF59E0B)
+                      : Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: selected
+                    ? const Color(0xFFC66A00)
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: selected
-                ? const Color(0xFFC66A00)
-                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -246,30 +302,44 @@ class CategoryAccentChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final index = categoryAccents.indexOf(color);
     return Semantics(
       button: true,
       selected: selected,
-      label: 'Choose category accent color',
+      label: index >= 0
+          ? '${_categoryAccentLabels[index]} category accent'
+          : 'Category accent color',
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
-        child: Container(
-          margin: const EdgeInsets.only(right: 12),
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: selected
-                ? Border.all(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    width: 3,
-                  )
-                : null,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: selected
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        width: 3,
+                      )
+                    : null,
+              ),
+              child: selected
+                  ? Icon(
+                      Icons.check,
+                      color: color.computeLuminance() > 0.3
+                          ? const Color(0xFF17202A)
+                          : Colors.white,
+                      size: 17,
+                    )
+                  : null,
+            ),
           ),
-          child: selected
-              ? const Icon(Icons.check, color: Colors.white, size: 17)
-              : null,
         ),
       ),
     );

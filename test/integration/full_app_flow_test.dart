@@ -4,6 +4,7 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notes_management_mobile_application/controllers/auth_controller.dart';
+import 'package:notes_management_mobile_application/core/error/failures.dart';
 import 'package:notes_management_mobile_application/controllers/category_controller.dart';
 import 'package:notes_management_mobile_application/controllers/note_controller.dart';
 
@@ -90,7 +91,7 @@ void main() {
       expect(
         () => controller.signIn(
             email: 'verify-me@example.com', password: '123456'),
-        throwsA(isA<FirebaseAuthException>()),
+        throwsA(isA<AuthenticationFailure>()),
       );
     });
   });

@@ -39,9 +39,12 @@ class NotesSummaryBar extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: onToggleSort,
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Icon(Icons.swap_vert, size: 20, color: muted),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: Icon(Icons.swap_vert, size: 20, color: muted),
+              ),
             ),
           ),
         ),

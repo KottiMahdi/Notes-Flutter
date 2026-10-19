@@ -25,6 +25,7 @@ class CategoryController {
     if (category == null || category.userId != uid) {
       throw FirebaseException(
         plugin: 'firestore',
+        code: 'permission-denied',
         message: 'You are not authorized to access this category.',
       );
     }
@@ -75,10 +76,11 @@ class CategoryController {
   }
 
   Future<
-      ({
-        CategoryModel category,
-        List<CategoryModel> categories,
-      })> getOrCreateUncategorizedCategory(List<CategoryModel> categories) async {
+          ({
+            CategoryModel category,
+            List<CategoryModel> categories,
+          })>
+      getOrCreateUncategorizedCategory(List<CategoryModel> categories) async {
     for (final category in categories) {
       if (category.name.trim().toLowerCase() == 'uncategorized') {
         return (category: category, categories: categories);

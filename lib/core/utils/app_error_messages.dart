@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../services/auth_service.dart';
+import '../error/error_mapper.dart';
+import '../error/failures.dart';
 
 class AppErrorMessages {
   const AppErrorMessages._();
@@ -13,12 +17,29 @@ class AppErrorMessages {
       return error.message;
     }
 
+    if (error is UnknownFailure) {
+      return fallback;
+    }
+
+    if (error is Failure) {
+      return error.message;
+    }
+
     if (error is FirebaseAuthException) {
-      return _authMessage(error.code, fallback);
+      final failure = mapToFailure(error);
+      return failure is UnknownFailure ? fallback : failure.message;
     }
 
     if (error is FirebaseException) {
       return _firebaseMessage(error.code, fallback);
+    }
+
+    if (error is TimeoutException) {
+      return 'The request took too long. Please try again.';
+    }
+
+    if (error is SocketException) {
+      return 'Check your internet connection and try again.';
     }
 
     if (error is ArgumentError) {
@@ -29,41 +50,6 @@ class AppErrorMessages {
     }
 
     return fallback;
-  }
-
-  static String _authMessage(String code, String fallback) {
-    switch (code) {
-      case 'invalid-email':
-        return 'Enter a valid email address.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'user-not-found':
-      case 'wrong-password':
-      case 'invalid-credential':
-        return 'The email or password is incorrect.';
-      case 'email-already-in-use':
-        return 'An account already exists for this email.';
-      case 'weak-password':
-        return 'Choose a stronger password.';
-      case 'operation-not-allowed':
-        return 'This sign-in method is not enabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please wait and try again.';
-      case 'network-request-failed':
-        return 'Check your internet connection and try again.';
-      case 'email-not-verified':
-        return 'Please verify your email before continuing.';
-      case 'no-current-user':
-        return 'Please sign in again to continue.';
-      case 'user-null':
-        return 'Sign-in did not complete. Please try again.';
-      case 'requires-recent-login':
-        return 'Please sign in again before making this change.';
-      case 'google-sign-out-failed':
-        return 'Signed out locally, but Google sign-out did not finish.';
-      default:
-        return fallback;
-    }
   }
 
   static String _firebaseMessage(String code, String fallback) {

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/widgets/theme_mode_scope.dart';
 
 const _kPrimaryOrange = Color(0xFFF59E0B);
-const _kDeepOrange = Color(0xFFC66A00);
 
 class NoteListAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isAllNotesMode;
@@ -43,7 +42,7 @@ class NoteListAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               child: const Icon(
                 Icons.sticky_note_2_outlined,
-                color: Colors.white,
+                color: Color(0xFF17202A),
                 size: 18,
               ),
             ),
@@ -61,26 +60,30 @@ class NoteListAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Tooltip(
-            message: isAllNotesMode
-                ? '$noteCount Total notes'
-                : '$noteCount Notes in category',
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 13,
-                vertical: 7,
-              ),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : const Color(0xFFFFF1D6),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Text(
-                '$noteCount Notes',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: _kDeepOrange,
-                  fontWeight: FontWeight.w800,
+          Flexible(
+            child: Tooltip(
+              message: isAllNotesMode
+                  ? '$noteCount Total notes'
+                  : '$noteCount Notes in category',
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : const Color(0xFFFFF1D6),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  '$noteCount Notes',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),

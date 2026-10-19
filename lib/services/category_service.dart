@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/error/guarded_call.dart';
 import '../models/category_model.dart';
 
 class CategoryService {
@@ -11,27 +12,33 @@ class CategoryService {
   CollectionReference<Map<String, dynamic>> get _categories =>
       _firestore.collection('categories');
 
-  Future<List<CategoryModel>> getCategories(String uid) async {
-    final snapshot = await _categories.where('userId', isEqualTo: uid).get();
-    return snapshot.docs
-        .map((doc) => CategoryModel.fromMap(doc.id, doc.data()))
-        .toList();
-  }
+  Future<List<CategoryModel>> getCategories(String uid) =>
+      guardedCall(() async {
+        final snapshot =
+            await _categories.where('userId', isEqualTo: uid).get();
+        return snapshot.docs
+            .map((doc) => CategoryModel.fromMap(doc.id, doc.data()))
+            .toList();
+      });
 
-  Future<int> getNoteCount(String categoryId, String uid) async {
-    final snapshot = await _categories
-        .doc(categoryId)
-        .collection('note')
-        .where('userId', isEqualTo: uid)
-        .get();
-    return snapshot.size;
-  }
+  Future<int> getNoteCount(String categoryId, String uid) =>
+      guardedCall(() async {
+        final snapshot = await _categories
+            .doc(categoryId)
+            .collection('note')
+            .where('userId', isEqualTo: uid)
+            .get();
+        return snapshot.size;
+      });
 
-  Future<CategoryModel?> getCategory(String categoryId) async {
-    final doc = await _categories.doc(categoryId).get();
-    final data = doc.data();
-    return doc.exists && data != null ? CategoryModel.fromMap(doc.id, data) : null;
-  }
+  Future<CategoryModel?> getCategory(String categoryId) =>
+      guardedCall(() async {
+        final doc = await _categories.doc(categoryId).get();
+        final data = doc.data();
+        return doc.exists && data != null
+            ? CategoryModel.fromMap(doc.id, data)
+            : null;
+      });
 
   Future<void> addCategory({
     required String uid,
@@ -40,13 +47,16 @@ class CategoryService {
     required int accentColor,
     required String type,
   }) {
-    return _categories.add({
-      'name': name,
-      'userId': uid,
-      'iconCode': iconCode,
-      'accentColor': accentColor,
-      'type': type,
-    });
+    return guardedCall(
+      isWrite: true,
+      () => _categories.add({
+        'name': name,
+        'userId': uid,
+        'iconCode': iconCode,
+        'accentColor': accentColor,
+        'type': type,
+      }),
+    );
   }
 
   Future<void> updateCategory({
@@ -64,10 +74,16 @@ class CategoryService {
     if (iconCode != null) updates['iconCode'] = iconCode;
     if (accentColor != null) updates['accentColor'] = accentColor;
     if (type != null) updates['type'] = type;
-    return _categories.doc(categoryId).update(updates);
+    return guardedCall(
+      isWrite: true,
+      () => _categories.doc(categoryId).update(updates),
+    );
   }
 
   Future<void> deleteCategory(String categoryId) {
-    return _categories.doc(categoryId).delete();
+    return guardedCall(
+      isWrite: true,
+      () => _categories.doc(categoryId).delete(),
+    );
   }
 }

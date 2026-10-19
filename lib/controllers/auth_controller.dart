@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../core/error/app_logger.dart';
+import '../core/error/failures.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -25,17 +26,22 @@ class AuthController {
   Future<void> _signOutGoogleSession() async {
     try {
       await _authService.signOutGoogle();
-    } catch (_) {
-      debugPrint('Google sign-out did not complete; continuing sign-out.');
+    } catch (error, stackTrace) {
+      AppLogger.error(
+        'Google sign-out did not complete; continuing Firebase sign-out.',
+        error: error,
+        stackTrace: stackTrace,
+        name: 'auth',
+      );
     }
   }
 
   Future<void> _ensureEmailIsVerified(UserCredential credential) async {
     final user = credential.user;
     if (user == null) {
-      throw FirebaseAuthException(
+      throw const AuthenticationFailure(
         code: 'user-null',
-        message: 'Authentication succeeded but no user was returned.',
+        message: 'Sign-in did not complete. Please try again.',
       );
     }
 
@@ -44,7 +50,7 @@ class AuthController {
     if (refreshedUser == null || !refreshedUser.emailVerified) {
       await _authService.signOut();
       await _signOutGoogleSession();
-      throw FirebaseAuthException(
+      throw const AuthenticationFailure(
         code: 'email-not-verified',
         message: 'Please verify your email before continuing.',
       );
@@ -90,9 +96,9 @@ class AuthController {
   Future<void> saveUserDetails(UserModel user) async {
     final uid = _authService.currentUser?.uid;
     if (uid == null) {
-      throw FirebaseAuthException(
+      throw const AuthenticationFailure(
         code: 'no-current-user',
-        message: 'No authenticated user available to save profile data.',
+        message: 'Please sign in again to continue.',
       );
     }
 
@@ -102,9 +108,9 @@ class AuthController {
   Future<void> sendEmailVerification() async {
     final user = _authService.currentUser;
     if (user == null) {
-      throw FirebaseAuthException(
+      throw const AuthenticationFailure(
         code: 'no-current-user',
-        message: 'No user is currently signed in.',
+        message: 'Please sign in again to continue.',
       );
     }
 
@@ -136,9 +142,9 @@ class AuthController {
     ScreenCache.clear();
     final user = _authService.currentUser;
     if (user == null) {
-      throw FirebaseAuthException(
+      throw const AuthenticationFailure(
         code: 'no-current-user',
-        message: 'No authenticated user available to delete.',
+        message: 'Please sign in again to continue.',
       );
     }
 

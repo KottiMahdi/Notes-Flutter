@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../controllers/category_controller.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_snack_bar.dart';
+import '../../core/widgets/loading_view.dart';
 import '../../core/widgets/theme_mode_scope.dart';
 import 'widgets/category_selection_controls.dart';
 
@@ -81,15 +84,13 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppErrorMessages.fromException(
-              error,
-              fallback: 'Could not update the category. Please try again.',
-            ),
-          ),
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not update the category. Please try again.',
         ),
+        onRetry: _updateCategory,
       );
     }
   }
@@ -119,7 +120,7 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const LoadingView(message: 'Saving category')
             : Form(
                 key: _formKey,
                 child: SingleChildScrollView(
@@ -136,10 +137,14 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                       const SizedBox(height: 28),
                       Row(
                         children: [
-                          Text(
-                            'Category Name',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                          Flexible(
+                            child: Text(
+                              'Category Name',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                           const Text(
@@ -156,6 +161,9 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _nameCtrl,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(30),
+                        ],
                         textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           hintText: 'Enter name',
@@ -256,12 +264,12 @@ class _UpdateCategoryViewState extends State<UpdateCategoryView> {
                         width: double.infinity,
                         height: 52,
                         child: FilledButton.icon(
-                          onPressed: _updateCategory,
+                          onPressed: _isLoading ? null : _updateCategory,
                           icon: const Icon(Icons.save_outlined),
                           label: const Text('Save'),
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFFF59E0B),
-                            foregroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF17202A),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),

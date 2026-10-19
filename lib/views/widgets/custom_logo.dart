@@ -10,6 +10,7 @@ class CustomLogo extends StatelessWidget {
         'assets/img/screen.png',
         height: 96,
         width: 96,
+        cacheWidth: (96 * MediaQuery.devicePixelRatioOf(context)).round(),
         fit: BoxFit.contain,
       ),
     );

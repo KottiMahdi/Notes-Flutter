@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../error/app_logger.dart';
+
 class NoteContentCodec {
   static const _deltaPrefix = 'quill_delta_v1:';
 
@@ -10,8 +12,13 @@ class NoteContentCodec {
       try {
         final decoded = jsonDecode(content.substring(_deltaPrefix.length));
         if (decoded is List) return Document.fromJson(decoded);
-      } catch (_) {
-        // Treat malformed or unknown data as a legacy plain-text note.
+      } catch (error, stackTrace) {
+        AppLogger.error(
+          'Could not decode saved note; treating it as legacy plain text.',
+          error: error,
+          stackTrace: stackTrace,
+          name: 'note_codec',
+        );
       }
     }
 

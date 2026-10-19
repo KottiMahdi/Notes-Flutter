@@ -6,6 +6,9 @@ import 'package:flutter_quill/flutter_quill.dart'
 
 import 'controllers/auth_controller.dart';
 import 'firebase_options.dart';
+import 'core/error/app_logger.dart';
+import 'core/error/failures.dart';
+import 'core/error/global_error_handler.dart';
 import 'core/utils/app_error_messages.dart';
 import 'core/widgets/theme_mode_scope.dart';
 import 'services/theme_preferences_service.dart';
@@ -19,8 +22,10 @@ import 'views/settings/settings_view.dart';
 import 'views/widgets/app_bottom_nav.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+    runApp(const MyApp());
+  });
 }
 
 class MyApp extends StatefulWidget {
@@ -59,7 +64,12 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _persistThemeMode() async {
-    await _themePreferencesService.saveThemeMode(_themeMode.value);
+    try {
+      await _themePreferencesService.saveThemeMode(_themeMode.value);
+    } on Failure catch (failure) {
+      AppLogger.error('Theme not persisted',
+          error: failure.cause, stackTrace: failure.stackTrace, name: 'cache');
+    }
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/scrollable_dialog_content.dart';
 
 class DeleteNoteDialog extends StatelessWidget {
   final bool isDark;
@@ -25,8 +26,7 @@ class DeleteNoteDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: ScrollableDialogContent(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

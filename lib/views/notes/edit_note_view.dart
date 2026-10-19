@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import '../../controllers/note_controller.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_snack_bar.dart';
 import '../../core/utils/note_content_codec.dart';
 import '../../core/utils/quill_editor_utils.dart';
 import 'widgets/add_link_dialog.dart';
@@ -37,6 +38,7 @@ class _EditNoteViewState extends State<EditNoteView> {
 
   StreamSubscription<DocChange>? _contentSubscription;
   bool _hasChanges = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -89,7 +91,8 @@ class _EditNoteViewState extends State<EditNoteView> {
   }
 
   Future<bool> _save() async {
-    if (!mounted || _plainText.trim().isEmpty) return false;
+    if (!mounted || _isSaving || _plainText.trim().isEmpty) return false;
+    setState(() => _isSaving = true);
     try {
       final content = NoteContentCodec.encode(_noteCtrl.document);
       final noteId = widget.noteId;
@@ -112,21 +115,28 @@ class _EditNoteViewState extends State<EditNoteView> {
       return true;
     } catch (error) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppErrorMessages.fromException(
-              error,
-              fallback: 'Could not save the note. Please try again.',
-            ),
-          ),
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not save the note. Please try again.',
         ),
+        onRetry: () {
+          _save();
+        },
       );
       return false;
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
-  void _leave() => Navigator.of(context).pop(false);
+  void _leave() {
+    if (_isSaving) return;
+    Navigator.of(context).pop(false);
+  }
 
   Future<void> _saveAndClose() async {
     final navigator = Navigator.of(context);
@@ -140,6 +150,7 @@ class _EditNoteViewState extends State<EditNoteView> {
   }
 
   void _toggleFormat(Attribute attribute) {
+    if (_isSaving) return;
     final isActive = _isFormatActive(attribute);
     _noteCtrl.formatSelection(
       isActive ? Attribute.clone(attribute, null) : attribute,
@@ -152,6 +163,7 @@ class _EditNoteViewState extends State<EditNoteView> {
   }
 
   Future<void> _addLink() async {
+    if (_isSaving) return;
     final existing = QuillEditorUtils.linkAtSelection(_noteCtrl);
     final result = await showDialog<LinkResult>(
       context: context,
@@ -198,23 +210,30 @@ class _EditNoteViewState extends State<EditNoteView> {
               IconButton(
                 tooltip: 'Undo',
                 icon: const Icon(Icons.undo),
-                onPressed: _canUndo ? _undo : null,
+                onPressed: _canUndo && !_isSaving ? _undo : null,
               ),
               IconButton(
                 tooltip: 'Redo',
                 icon: const Icon(Icons.redo),
-                onPressed: _canRedo ? _redo : null,
+                onPressed: _canRedo && !_isSaving ? _redo : null,
               ),
             ],
           ),
           actions: [
             IconButton(
               tooltip: 'Save',
-              icon: const Icon(Icons.check),
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check),
               color: accent,
-              onPressed: _hasChanges && _plainText.trim().isNotEmpty
-                  ? _saveAndClose
-                  : null,
+              onPressed:
+                  _hasChanges && !_isSaving && _plainText.trim().isNotEmpty
+                      ? _saveAndClose
+                      : null,
             ),
             const SizedBox(width: 6),
           ],
@@ -229,6 +248,7 @@ class _EditNoteViewState extends State<EditNoteView> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                 child: TextField(
                   controller: _titleCtrl,
+                  enabled: !_isSaving,
                   maxLines: 1,
                   textCapitalization: TextCapitalization.sentences,
                   style: theme.textTheme.headlineMedium?.copyWith(
@@ -255,23 +275,29 @@ class _EditNoteViewState extends State<EditNoteView> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: QuillEditor.basic(
-                    controller: _noteCtrl,
-                    focusNode: _noteFocusNode,
-                    config: const QuillEditorConfig(
-                      expands: true,
-                      padding: EdgeInsets.only(bottom: 16),
-                      placeholder: 'Enter your note...',
+                  child: AbsorbPointer(
+                    absorbing: _isSaving,
+                    child: QuillEditor.basic(
+                      controller: _noteCtrl,
+                      focusNode: _noteFocusNode,
+                      config: const QuillEditorConfig(
+                        expands: true,
+                        padding: EdgeInsets.only(bottom: 16),
+                        placeholder: 'Enter your note...',
+                      ),
                     ),
                   ),
                 ),
               ),
-              NoteFormattingToolbar(
-                isDark: isDark,
-                isFormatActive: _isFormatActive,
-                onToggleFormat: _toggleFormat,
-                hasLink: QuillEditorUtils.linkAtSelection(_noteCtrl) != null,
-                onAddLink: _addLink,
+              AbsorbPointer(
+                absorbing: _isSaving,
+                child: NoteFormattingToolbar(
+                  isDark: isDark,
+                  isFormatActive: _isFormatActive,
+                  onToggleFormat: _toggleFormat,
+                  hasLink: QuillEditorUtils.linkAtSelection(_noteCtrl) != null,
+                  onAddLink: _addLink,
+                ),
               ),
             ],
           ),

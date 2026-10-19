@@ -3,7 +3,9 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../controllers/note_controller.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_snack_bar.dart';
 import '../../core/utils/screen_cache.dart';
+import '../../core/widgets/loading_view.dart';
 import '../../models/category_model.dart';
 import '../../models/categorized_note_model.dart';
 import '../home/widgets/success_dialog.dart';
@@ -55,39 +57,41 @@ class _NoteListViewState extends State<NoteListView> {
   String get _cacheKey => 'notes:${widget.categoryId ?? '*'}';
 
   bool _isLoading = true;
+  bool _isRefreshing = false;
+  bool _isPreparingAdd = false;
   bool _sortNewestFirst = true;
   String? _loadError;
   String? _categoryTitle;
   List<CategoryModel> _categories = [];
   final Set<String> _deletingNoteIds = {};
+  final Set<String> _openingNoteIds = {};
   List<CategorizedNoteModel> _entries = [];
+  List<CategorizedNoteModel> _sortedEntries = [];
+  List<CategorizedNoteModel> _uncategorizedEntries = [];
+  List<CategorizedNoteModel> _categorizedEntries = [];
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  void _rebuildSortedSections() {
+    _sortedEntries = _sortNewestFirst ? _entries : _entries.reversed.toList();
+    _uncategorizedEntries = [];
+    _categorizedEntries = [];
+
+    for (final entry in _sortedEntries) {
+      if (entry.categoryName.trim().toLowerCase() == 'uncategorized') {
+        _uncategorizedEntries.add(entry);
+      } else {
+        _categorizedEntries.add(entry);
+      }
+    }
   }
-
-  List<CategorizedNoteModel> get _sortedEntries {
-    if (_sortNewestFirst) return _entries;
-    return _entries.reversed.toList();
-  }
-
-  List<CategorizedNoteModel> get _uncategorizedEntries => _sortedEntries
-      .where(
-          (entry) => entry.categoryName.trim().toLowerCase() == 'uncategorized')
-      .toList();
-
-  List<CategorizedNoteModel> get _categorizedEntries => _sortedEntries
-      .where(
-          (entry) => entry.categoryName.trim().toLowerCase() != 'uncategorized')
-      .toList();
 
   Future<void> _fetchNotes({bool showLoading = false}) async {
-    if (showLoading && mounted) {
+    if (mounted) {
       setState(() {
-        _isLoading = true;
-        _loadError = null;
+        _isRefreshing = true;
+        if (showLoading) {
+          _isLoading = true;
+          _loadError = null;
+        }
       });
     }
 
@@ -103,16 +107,15 @@ class _NoteListViewState extends State<NoteListView> {
         setState(() {
           _categories = categories;
           _entries = entries;
+          _rebuildSortedSections();
           _isLoading = false;
+          _isRefreshing = false;
           _loadError = null;
         });
       } else {
         final categoryId = widget.categoryId!;
         final categoryName = widget.categoryName ??
-            await _categoryController
-                .getCategory(categoryId)
-                .then((category) => category.name)
-                .catchError((_) => 'Workspace');
+            (await _categoryController.getCategory(categoryId)).name;
         final notes = await _noteController.getNotes(categoryId);
         if (!mounted) return;
         final entries = notes
@@ -129,7 +132,9 @@ class _NoteListViewState extends State<NoteListView> {
         setState(() {
           _categoryTitle = categoryName;
           _entries = entries;
+          _rebuildSortedSections();
           _isLoading = false;
+          _isRefreshing = false;
           _loadError = null;
         });
       }
@@ -137,6 +142,7 @@ class _NoteListViewState extends State<NoteListView> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+        _isRefreshing = false;
         _loadError = AppErrorMessages.fromException(
           error,
           fallback: 'Could not load notes. Please try again.',
@@ -146,67 +152,84 @@ class _NoteListViewState extends State<NoteListView> {
   }
 
   Future<void> _openAddNote() async {
-    final navigator = Navigator.of(context);
-    String? targetCategoryId = widget.categoryId;
+    if (_isPreparingAdd || _isLoading) return;
+    setState(() => _isPreparingAdd = true);
 
-    if (targetCategoryId == null) {
-      try {
-        final result = await _categoryController
-            .getOrCreateUncategorizedCategory(_categories);
-        targetCategoryId = result.category.id;
-        if (!identical(result.categories, _categories) && mounted) {
-          setState(() => _categories = result.categories);
+    try {
+      final navigator = Navigator.of(context);
+      String? targetCategoryId = widget.categoryId;
+
+      if (targetCategoryId == null) {
+        try {
+          final result = await _categoryController
+              .getOrCreateUncategorizedCategory(_categories);
+          targetCategoryId = result.category.id;
+          if (!identical(result.categories, _categories) && mounted) {
+            setState(() => _categories = result.categories);
+          }
+        } catch (error) {
+          if (!mounted) return;
+          showRetrySnackBar(
+            context,
+            message: AppErrorMessages.fromException(
+              error,
+              fallback: 'Could not prepare an uncategorized note.',
+            ),
+            onRetry: _openAddNote,
+          );
+          return;
         }
-      } catch (error) {
-        if (!mounted) return;
-        _showSnackBar(
-          AppErrorMessages.fromException(
-            error,
-            fallback: 'Could not prepare an uncategorized note.',
-          ),
-        );
-        return;
       }
-    }
-    if (!mounted) return;
-
-    final changed = await navigator.push(
-      MaterialPageRoute(
-        builder: (context) => AddNoteView(categoryId: targetCategoryId!),
-      ),
-    );
-    if (!mounted) return;
-    if (changed == true) {
-      await _fetchNotes();
       if (!mounted) return;
-      await showSuccessDialog(
-        context: context,
-        title: 'Note added',
-        message: 'Your note has been saved.',
+
+      final changed = await navigator.push(
+        MaterialPageRoute(
+          builder: (context) => AddNoteView(categoryId: targetCategoryId!),
+        ),
       );
+      if (!mounted) return;
+      if (changed == true) {
+        await _fetchNotes();
+        if (!mounted) return;
+        await showSuccessDialog(
+          context: context,
+          title: 'Note added',
+          message: 'Your note has been saved.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPreparingAdd = false);
+      }
     }
   }
 
   Future<void> _openEditNote(CategorizedNoteModel entry) async {
-    final changed = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => EditNoteView(
-          categoryId: entry.categoryId,
-          noteId: entry.note.id,
-          oldText: entry.note.note,
-          oldTitle: entry.note.title,
+    final noteId = entry.note.id;
+    if (!_openingNoteIds.add(noteId)) return;
+    try {
+      final changed = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => EditNoteView(
+            categoryId: entry.categoryId,
+            noteId: noteId,
+            oldText: entry.note.note,
+            oldTitle: entry.note.title,
+          ),
         ),
-      ),
-    );
-    if (!mounted) return;
-    if (changed == true) {
-      await _fetchNotes();
-      if (!mounted) return;
-      await showSuccessDialog(
-        context: context,
-        title: 'Note updated',
-        message: 'Your changes have been saved.',
       );
+      if (!mounted) return;
+      if (changed == true) {
+        await _fetchNotes();
+        if (!mounted) return;
+        await showSuccessDialog(
+          context: context,
+          title: 'Note updated',
+          message: 'Your changes have been saved.',
+        );
+      }
+    } finally {
+      _openingNoteIds.remove(noteId);
     }
   }
 
@@ -226,11 +249,13 @@ class _NoteListViewState extends State<NoteListView> {
       );
     } catch (error) {
       if (!mounted) return;
-      _showSnackBar(
-        AppErrorMessages.fromException(
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
           error,
           fallback: 'Could not delete the note. Please try again.',
         ),
+        onRetry: () => _deleteNote(entry),
       );
     } finally {
       if (mounted) {
@@ -263,6 +288,7 @@ class _NoteListViewState extends State<NoteListView> {
       if (cached != null) {
         _categories = cached.$1;
         _entries = cached.$2;
+        _rebuildSortedSections();
         _categoryTitle = cached.$3;
         _isLoading = false;
       }
@@ -292,9 +318,18 @@ class _NoteListViewState extends State<NoteListView> {
             child: FloatingActionButton(
               tooltip: 'Add note',
               backgroundColor: _kPrimaryOrange,
-              foregroundColor: Colors.white,
-              onPressed: _isLoading ? null : _openAddNote,
-              child: const Icon(Icons.add_circle_outline, size: 28),
+              foregroundColor: const Color(0xFF17202A),
+              onPressed: _isLoading || _isPreparingAdd ? null : _openAddNote,
+              child: _isPreparingAdd
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF17202A),
+                      ),
+                    )
+                  : const Icon(Icons.add_circle_outline, size: 28),
             ),
           ),
         ),
@@ -306,25 +341,40 @@ class _NoteListViewState extends State<NoteListView> {
         body: SafeArea(
           top: false,
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const LoadingView(message: 'Loading notes')
               : _loadError != null
                   ? NotesLoadErrorView(
                       message: _loadError!,
                       onRetry: () => _fetchNotes(showLoading: true),
                     )
-                  : NoteListScrollView(
-                      isDark: isDark,
-                      isAllNotesMode: _isAllNotesMode,
-                      entries: _sortedEntries,
-                      uncategorizedEntries: _uncategorizedEntries,
-                      categorizedEntries: _categorizedEntries,
-                      deletingNoteIds: _deletingNoteIds,
-                      sortNewestFirst: _sortNewestFirst,
-                      onToggleSort: () => setState(
-                        () => _sortNewestFirst = !_sortNewestFirst,
-                      ),
-                      onNoteTap: _openEditNote,
-                      onNoteLongPress: _confirmDeleteNote,
+                  : Column(
+                      children: [
+                        if (_isRefreshing)
+                          const LinearProgressIndicator(
+                            minHeight: 2,
+                            semanticsLabel: 'Refreshing notes',
+                          ),
+                        Expanded(
+                          child: NoteListScrollView(
+                            isDark: isDark,
+                            isAllNotesMode: _isAllNotesMode,
+                            entries: _sortedEntries,
+                            uncategorizedEntries: _uncategorizedEntries,
+                            categorizedEntries: _categorizedEntries,
+                            deletingNoteIds: _deletingNoteIds,
+                            sortNewestFirst: _sortNewestFirst,
+                            onToggleSort: () {
+                              setState(() {
+                                _sortNewestFirst = !_sortNewestFirst;
+                                _rebuildSortedSections();
+                              });
+                            },
+                            onNoteTap: _openEditNote,
+                            onNoteLongPress: _confirmDeleteNote,
+                            onAddNote: _isPreparingAdd ? null : _openAddNote,
+                          ),
+                        ),
+                      ],
                     ),
         ),
         bottomNavigationBar: _isAllNotesMode

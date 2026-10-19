@@ -1,8 +1,8 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_error_dialog.dart';
 
 class LoginForm extends StatefulWidget {
   final AuthController? authController;
@@ -51,17 +51,14 @@ class _LoginFormState extends State<LoginForm> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      AwesomeDialog(
-        context: context,
-        dialogType: DialogType.error,
-        animType: AnimType.rightSlide,
-        title: 'Error',
-        desc: AppErrorMessages.fromException(
+      await showRetryErrorDialog(
+        context,
+        message: AppErrorMessages.fromException(
           error,
           fallback: 'Login failed. Please check your details and try again.',
         ),
-        btnOkOnPress: () {},
-      ).show();
+        onRetry: _login,
+      );
     }
   }
 

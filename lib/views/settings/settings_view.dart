@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_snack_bar.dart';
+import '../../core/widgets/scrollable_dialog_content.dart';
 import '../../core/widgets/theme_mode_scope.dart';
 import '../widgets/app_bottom_nav.dart';
 
@@ -25,18 +27,12 @@ class _SettingsViewState extends State<SettingsView> {
   bool _isSigningOut = false;
   bool _isDeletingAccount = false;
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
   Future<void> _signOut() async {
     if (_isSigningOut || _isDeletingAccount) return;
 
     final confirmed = await _showAccountConfirmation(
       icon: Icons.logout_rounded,
-      accentColor: const Color(0xFFC66A00),
+      accentColor: const Color(0xFF954A00),
       title: 'Sign out?',
       message: 'You will need to sign in again to access your notes.',
       confirmLabel: 'Sign out',
@@ -51,11 +47,13 @@ class _SettingsViewState extends State<SettingsView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isSigningOut = false);
-      _showMessage(
-        AppErrorMessages.fromException(
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
           error,
           fallback: 'Could not sign out. Please try again.',
         ),
+        onRetry: _signOut,
       );
     }
   }
@@ -81,11 +79,13 @@ class _SettingsViewState extends State<SettingsView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isDeletingAccount = false);
-      _showMessage(
-        AppErrorMessages.fromException(
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
           error,
           fallback: 'Could not delete your account. Please try again.',
         ),
+        onRetry: _deleteAccount,
       );
     }
   }
@@ -107,8 +107,7 @@ class _SettingsViewState extends State<SettingsView> {
       builder: (dialogContext) => Dialog(
         backgroundColor: surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: ScrollableDialogContent(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +211,7 @@ class _SettingsViewState extends State<SettingsView> {
               ),
               child: const Icon(
                 Icons.sticky_note_2_outlined,
-                color: Colors.white,
+                color: Color(0xFF17202A),
                 size: 18,
               ),
             ),
@@ -265,7 +264,7 @@ class _SettingsViewState extends State<SettingsView> {
                 children: [
                   _AccountOptionTile(
                     icon: Icons.logout_rounded,
-                    color: const Color(0xFFC66A00),
+                    color: const Color(0xFF954A00),
                     title: 'Sign out',
                     subtitle: 'Return to the login screen',
                     isBusy: _isSigningOut,

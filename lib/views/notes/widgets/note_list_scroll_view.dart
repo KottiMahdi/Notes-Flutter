@@ -17,6 +17,7 @@ class NoteListScrollView extends StatelessWidget {
   final VoidCallback onToggleSort;
   final ValueChanged<CategorizedNoteModel> onNoteTap;
   final ValueChanged<CategorizedNoteModel> onNoteLongPress;
+  final VoidCallback? onAddNote;
 
   const NoteListScrollView({
     super.key,
@@ -30,6 +31,7 @@ class NoteListScrollView extends StatelessWidget {
     required this.onToggleSort,
     required this.onNoteTap,
     required this.onNoteLongPress,
+    this.onAddNote,
   });
 
   Widget _buildSliverList(
@@ -78,7 +80,7 @@ class NoteListScrollView extends StatelessWidget {
         if (entries.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
-            child: NotesEmptyView(isDark: isDark),
+            child: NotesEmptyView(onAddNote: onAddNote),
           )
         else if (isAllNotesMode) ...[
           SliverToBoxAdapter(

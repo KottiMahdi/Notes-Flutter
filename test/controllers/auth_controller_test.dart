@@ -1,8 +1,8 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notes_management_mobile_application/controllers/auth_controller.dart';
+import 'package:notes_management_mobile_application/core/error/failures.dart';
 import 'package:notes_management_mobile_application/models/user_model.dart';
 
 void main() {
@@ -25,7 +25,7 @@ void main() {
           password: '123456',
         ),
         throwsA(
-          isA<FirebaseAuthException>().having(
+          isA<AuthenticationFailure>().having(
             (e) => e.code,
             'code',
             'email-not-verified',
@@ -66,7 +66,7 @@ void main() {
           const UserModel(username: 'Nope', email: 'nope@example.com'),
         ),
         throwsA(
-          isA<FirebaseAuthException>().having(
+          isA<AuthenticationFailure>().having(
             (e) => e.code,
             'code',
             'no-current-user',
@@ -206,7 +206,7 @@ void main() {
       expect(
         controller.deleteAccount,
         throwsA(
-          isA<FirebaseAuthException>().having(
+          isA<AuthenticationFailure>().having(
             (error) => error.code,
             'code',
             'no-current-user',

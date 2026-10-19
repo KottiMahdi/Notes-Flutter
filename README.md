@@ -77,6 +77,45 @@ flutter analyze
 flutter test
 ```
 
+## Security and environment configuration
+
+The app currently uses one Firebase project. Firebase values in
+`lib/firebase_options.dart` and `android/app/google-services.json` are
+**public client configuration**, not private credentials. They are required
+by client SDKs and can be extracted from a released app. Do not treat moving
+them to `.env` or `--dart-define` as a way to make them secret. Restrict the
+Google API keys to the app identifiers and required APIs, and enforce access
+with Firebase Authentication, Firestore Security Rules, and App Check.
+
+No backend base URL or private API token is currently used, so there is no
+runtime configuration to move into `.env`. `.env.example` is a placeholder
+for a future backend endpoint and is not loaded by the app. If one is added,
+use HTTPS and load development/staging/production values at build time; never
+commit the actual environment file. Keep genuinely sensitive credentials on a
+backend.
+
+For separate Firebase environments, create separate Firebase projects and
+register the target app identifiers in each project. Generate and select the
+corresponding `FirebaseOptions` for each build flavor with the FlutterFire CLI;
+do not point a build labeled “staging” at the production project. This
+repository currently has only the generated options for its configured
+project, so separate Firebase environments require those additional project
+configurations before they can be built.
+
+For Android release builds, enable Flutter obfuscation and retain the symbol
+files privately for crash symbolication:
+
+```bash
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
+flutter build apk --release --obfuscate --split-debug-info=build/symbols
+```
+
+The Android release build already enables R8 via `minifyEnabled true` and uses
+the optimized default ProGuard rules. Add narrowly scoped keep rules only if a
+release test demonstrates that a plugin needs them; do not disable shrinking
+globally. Obfuscation and R8 make reverse engineering harder, but do not hide
+secrets embedded in the app.
+
 ## Project layout
 
 ```text

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../controllers/category_controller.dart';
 import '../../core/utils/app_error_messages.dart';
+import '../../core/widgets/retry_snack_bar.dart';
+import '../../core/widgets/loading_view.dart';
 import '../../core/widgets/theme_mode_scope.dart';
 import 'widgets/category_selection_controls.dart';
 
@@ -65,15 +68,13 @@ class _AddCategoryViewState extends State<AddCategoryView> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppErrorMessages.fromException(
-              error,
-              fallback: 'Could not add the category. Please try again.',
-            ),
-          ),
+      showRetrySnackBar(
+        context,
+        message: AppErrorMessages.fromException(
+          error,
+          fallback: 'Could not add the category. Please try again.',
         ),
+        onRetry: _addCategory,
       );
     }
   }
@@ -103,7 +104,7 @@ class _AddCategoryViewState extends State<AddCategoryView> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const LoadingView(message: 'Adding category')
             : Form(
                 key: _formKey,
                 child: SingleChildScrollView(
@@ -121,10 +122,14 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                       const SizedBox(height: 28),
                       Row(
                         children: [
-                          Text(
-                            'Category Name',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                          Flexible(
+                            child: Text(
+                              'Category Name',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                           const Text(
@@ -141,6 +146,9 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _nameCtrl,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(30),
+                        ],
                         textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           hintText: 'Enter name',
@@ -241,12 +249,12 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                         width: double.infinity,
                         height: 52,
                         child: FilledButton.icon(
-                          onPressed: _addCategory,
+                          onPressed: _isLoading ? null : _addCategory,
                           icon: const Icon(Icons.add),
                           label: const Text('Add'),
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFFF59E0B),
-                            foregroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF17202A),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),

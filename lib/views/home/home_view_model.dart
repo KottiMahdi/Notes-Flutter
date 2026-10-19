@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../core/error/app_logger.dart';
 import '../../../controllers/category_controller.dart';
 import '../../../models/category_model.dart';
 import '../../../core/utils/screen_cache.dart';
@@ -15,6 +16,7 @@ class HomeViewModel extends ChangeNotifier {
 
   bool _disposed = false;
   bool isLoading = true;
+  bool isRefreshing = false;
   int selectedFilterIndex = 0;
   List<CategoryModel> categories = [];
   Map<String, int> noteCounts = {};
@@ -49,6 +51,7 @@ class HomeViewModel extends ChangeNotifier {
     if (showLoading) {
       isLoading = true;
     }
+    isRefreshing = true;
     _notify();
 
     try {
@@ -66,13 +69,21 @@ class HomeViewModel extends ChangeNotifier {
       categories = loadedCategories;
       noteCounts = loadedNoteCounts;
       isLoading = false;
+      isRefreshing = false;
       if (useCache) {
         ScreenCache.write('home', (loadedCategories, loadedNoteCounts));
       }
       _notify();
-    } catch (_) {
+    } catch (error, stackTrace) {
       isLoading = false;
+      isRefreshing = false;
       _notify();
+      AppLogger.error(
+        'Could not load categories.',
+        error: error,
+        stackTrace: stackTrace,
+        name: 'home',
+      );
       rethrow;
     }
   }
@@ -82,14 +93,15 @@ class HomeViewModel extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> deleteCategory(CategoryModel category) async {
+  Future<bool> deleteCategory(CategoryModel category) async {
     final id = category.id;
-    if (!deletingCategoryIds.add(id)) return;
+    if (!deletingCategoryIds.add(id)) return false;
     _notify();
 
     try {
       await categoryController.deleteCategory(id);
       await loadCategories();
+      return true;
     } finally {
       deletingCategoryIds.remove(id);
       _notify();

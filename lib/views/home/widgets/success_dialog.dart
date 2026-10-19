@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/scrollable_dialog_content.dart';
 
 /// Shows a success confirmation dialog matching the app's design system
 /// (e.g. after adding or updating a category).
@@ -17,8 +18,7 @@ Future<void> showSuccessDialog({
     builder: (dialogContext) => Dialog(
       backgroundColor: surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: ScrollableDialogContent(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,7 +56,7 @@ Future<void> showSuccessDialog({
                 onPressed: () => Navigator.of(dialogContext).pop(),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFF59E0B),
-                  foregroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF17202A),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
