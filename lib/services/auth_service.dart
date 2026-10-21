@@ -15,7 +15,16 @@ class AuthService {
     FirebaseAuth? auth,
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+
+  // google_sign_in 7 requires initialize() exactly once per process.
+  static Future<void>? _googleInit;
+
+  Future<void> _ensureGoogleInitialized() =>
+      _googleInit ??= _googleSignIn.initialize().catchError((Object error) {
+        _googleInit = null;
+        throw error;
+      });
 
   User? get currentUser => _auth.currentUser;
 
@@ -59,15 +68,20 @@ class AuthService {
       );
 
   Future<UserCredential> signInWithGoogle() => guardedCall(() async {
-        final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) {
-          throw const AuthActionCancelledException();
+        await _ensureGoogleInitialized();
+        final GoogleSignInAccount googleUser;
+        try {
+          googleUser = await _googleSignIn.authenticate();
+        } on GoogleSignInException catch (error) {
+          if (error.code == GoogleSignInExceptionCode.canceled ||
+              error.code == GoogleSignInExceptionCode.interrupted) {
+            throw const AuthActionCancelledException();
+          }
+          rethrow;
         }
 
-        final googleAuth = await googleUser.authentication;
         final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+          idToken: googleUser.authentication.idToken,
         );
         return _auth.signInWithCredential(credential);
       });
@@ -80,7 +94,10 @@ class AuthService {
   Future<void> sendPasswordReset(String email) =>
       guardedCall(() => _auth.sendPasswordResetEmail(email: email));
 
-  Future<void> signOutGoogle() => guardedCall(_googleSignIn.signOut);
+  Future<void> signOutGoogle() => guardedCall(() async {
+        await _ensureGoogleInitialized();
+        await _googleSignIn.signOut();
+      });
 
   Future<void> signOut() => guardedCall(_auth.signOut);
 

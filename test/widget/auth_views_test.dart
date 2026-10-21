@@ -83,7 +83,7 @@ void main() {
 
     testWidgets('login view Google button uses injected controller',
         (tester) async {
-      final google = GoogleSignIn();
+      final google = GoogleSignIn.instance;
       final auth = _SuccessfulLoginAuthController();
       await tester.pumpWidget(
         MaterialApp(
