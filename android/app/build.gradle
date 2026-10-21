@@ -14,14 +14,15 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
-def signingProperty = { String name ->
-    System.getenv(name) ?: keystoreProperties[name]
+// Environment variable first, then key.properties (accepts either key style).
+def signingProperty = { String envName, String propName ->
+    System.getenv(envName) ?: keystoreProperties[envName] ?: keystoreProperties[propName]
 }
 
-def releaseStoreFile = signingProperty('ANDROID_KEYSTORE_FILE')
-def releaseStorePassword = signingProperty('ANDROID_KEYSTORE_PASSWORD')
-def releaseKeyAlias = signingProperty('ANDROID_KEY_ALIAS')
-def releaseKeyPassword = signingProperty('ANDROID_KEY_PASSWORD')
+def releaseStoreFile = signingProperty('ANDROID_KEYSTORE_FILE', 'storeFile')
+def releaseStorePassword = signingProperty('ANDROID_KEYSTORE_PASSWORD', 'storePassword')
+def releaseKeyAlias = signingProperty('ANDROID_KEY_ALIAS', 'keyAlias')
+def releaseKeyPassword = signingProperty('ANDROID_KEY_PASSWORD', 'keyPassword')
 def hasReleaseSigningProperties = [
     releaseStoreFile,
     releaseStorePassword,
