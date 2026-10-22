@@ -5,6 +5,7 @@ import '../../core/utils/app_error_messages.dart';
 import '../../core/widgets/retry_snack_bar.dart';
 import '../../core/widgets/scrollable_dialog_content.dart';
 import '../../core/widgets/theme_mode_scope.dart';
+import 'about_view.dart';
 import '../widgets/app_bottom_nav.dart';
 
 class SettingsView extends StatefulWidget {
@@ -282,6 +283,43 @@ class _SettingsViewState extends State<SettingsView> {
                     onTap: busy ? null : _deleteAccount,
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'About',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: muted.withValues(alpha: isDark ? 0.12 : 0.1),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.06),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: _AccountOptionTile(
+                icon: Icons.info_outline_rounded,
+                color: const Color(0xFFC66A00),
+                title: 'About NoteNest',
+                subtitle: 'Privacy policy and contact information',
+                isBusy: false,
+                muted: muted,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const AboutView(),
+                  ),
+                ),
               ),
             ),
           ],

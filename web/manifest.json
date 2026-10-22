@@ -1,11 +1,11 @@
 {
-    "name": "notes_management_mobille_application",
-    "short_name": "notes_management_mobille_application",
+    "name": "NoteNest",
+    "short_name": "NoteNest",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "NoteNest notes management app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

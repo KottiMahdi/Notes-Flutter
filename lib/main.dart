@@ -86,7 +86,7 @@ class _MyAppState extends State<MyApp> {
       builder: (context, mode, child) => ThemeModeScope(
         notifier: _themeMode,
         child: MaterialApp(
-          title: 'Notes App',
+          title: 'NoteNest',
           themeMode: mode,
           localizationsDelegates: const [
             FlutterQuillLocalizations.delegate,

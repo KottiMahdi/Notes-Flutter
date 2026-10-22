@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "notes_management_mobille_application" "\0"
+            VALUE "FileDescription", "NoteNest" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "notes_management_mobille_application" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2024 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "notes_management_mobille_application.exe" "\0"
-            VALUE "ProductName", "notes_management_mobille_application" "\0"
+            VALUE "ProductName", "NoteNest" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
